@@ -9,10 +9,11 @@ Autocomplete and docs for writing RuneScape 3 Plugin Hub plugins in VS Code.
 - **API Explorer** (RS3 icon in the activity bar): browse everything by area, hover for docs, click the inline buttons to insert at cursor or open the docs page.
 - **RS3: Search API…** (`Ctrl+Shift+P`): fuzzy-search all ~2,700 API members; Enter inserts it.
 - **RS3: Open Docs for Symbol Under Cursor** (also in the editor right-click menu).
-- **RS3: New Plugin…** scaffolds `plugin.json` + `main.lua`.
+- **RS3: New Plugin…** scaffolds `plugin.json` + `main.lua`, plain or with PrettyUI.
+- **Library plugins**: list PrettyUI as a dependency and `prettyui.` gets completions, hover docs and type checking too (below).
 - **plugin.json validation** and completion (keys, permission names, URL format).
 - **Snippets**: `rs3event`, `rs3xp`, `rs3inv`, `rs3db`, `rs3shutdown`, `rs3log`, `rs3level`, `rs3var`, `rs3cmd`.
-- **RS3: Show Developer Cheats & Console Commands**: quick reference for beta-world testing.
+- **RS3: Copy a Cheat or Console Command…**: search the beta cheats and plugin console commands, fill in the arguments, and paste the result into the client console.
 - **RS3: Open UI Preview**: live preview of your plugin's UI (below).
 
 ## UI Preview
@@ -27,10 +28,23 @@ Click the preview icon in the editor title bar (or run **RS3: Open UI Preview**)
 
 ## Sprite Maker & Style Studio
 - **Sprite Maker** (**RS3: New Sprite…**): pixel editor for PNGs in `resources/`, with RS palette, templates (icon, 9-slice button and panel frame, scrollbar states), draggable 9-slice guides, stretch/tile/9-slice/tint preview, and the Lua to use it.
-- **Style Studio** (**RS3: Open Style Studio**): gallery of the built-in stylesheets, a designer for custom stylesheets (parent + overrides, colour pickers, live preview) that generates `styles.lua`, and a discovery script that pulls the real `ui.StyleValue` keys from the dev client into the designer and autocomplete.
+- **Style Studio** (**RS3: Open Style Studio**): gallery of the built-in stylesheets, a designer for custom stylesheets (parent + overrides, colour pickers, live preview) that generates `styles.lua`.
 - The UI preview draws your PNGs and custom stylesheets.
 
 Details: `reference/sprites-and-styles.md` in the extension, or the **?** in the preview.
+
+## PrettyUI and other library plugins
+Some plugins are libraries that other plugins build on. [PrettyUI](https://prettyui.j3.gg/) (by J3, plugin hub ID 6398181) gives you native-looking windows, panels, tabs, buttons, fields, item slots and graphs with automatic layout.
+
+Add it to `plugin.json` (typing in `requiredDependencies` offers it):
+
+```json
+"requiredDependencies": { "prettyui": 6398181 }
+```
+
+Save, and the extension loads PrettyUI's definitions for that workspace: `prettyui.Window.new(...)`, `view:AddText(...)`, option tables and callbacks all complete and type-check, and hovers link to the matching section of the PrettyUI docs. Remove the dependency and they unload again. **RS3: New Plugin…** → **With PrettyUI** starts a plugin that already uses it. The API Explorer lists it under **PrettyUI (library plugin)**.
+
+The extension ships only editor definitions written from PrettyUI's public docs. None of PrettyUI's code is included: the game client downloads the real library from the plugin hub. The UI preview has a **PrettyUI** switch: on, it runs PrettyUI from the copy your game client already downloaded and draws it; off, it shows the base view. It turns on by itself for plugins that depend on PrettyUI.
 
 ## How it works
 Completions, hover and diagnostics come from the **Lua** extension by sumneko (lua-language-server), which is installed automatically as a dependency. This extension ships LuaLS annotation files for the RS3 API and adds them to `Lua.workspace.library` (and sets `Lua.runtime.version` to Lua 5.4) in any workspace that contains a `plugin.json`. For other folders run **RS3: Enable Plugin API for This Workspace**. Change this with the `rs3lua.autoEnable` setting.
@@ -40,17 +54,7 @@ Completions, hover and diagnostics come from the **Lua** extension by sumneko (l
 
 The list comes from two rule-safe sources, kept on this computer:
 - **RS Wiki** (**RS3: Update Item List from the RS Wiki**): every released item's name and ID, from the wiki's public data.
-- **Your items** (**RS3: Create Item Export Plugin**): a tiny beta plugin that sends only what's in your backpack, worn equipment and bank, with the exact config names the game uses. Open your bank once while it's enabled. These also get `id.Obj.` autocomplete and hover names.
-
-## API Probe (test against the real client)
-**RS3: Create API Probe Plugin** writes a read-only dev plugin that checks every definition against the beta client and sends the results back to VS Code. It reports:
-- missing or wrongly-typed names
-- undocumented members
-- enum values the docs leave out
-- id.StyleSheet / id.Font names and style keys
-- the real ribbon and settings window sizes
-
-You can apply the findings in one click. See `reference/api-probe.md`.
+- **Your items** (**RS3: Create Item Export Plugin**): a tiny beta plugin that sends only what's in your backpack, worn equipment and bank, with the exact config names the game uses. It goes straight into the client's `dev_plugins` folder when it can find it (or set `rs3lua.devPluginsFolder`), and the console commands to load it are copied for you: paste them in the client console and open your bank once. No HTTP permission? It prints `RS3X|` lines instead; copy them and run **RS3: Import Item Export Output**. Exported items also get `id.Obj.` autocomplete and hover names.
 
 ## Troubleshooting: suggestions are just words from the file
 That means the Lua language server isn't using the RS3 definitions. Look at the **RS3 API** item in the status bar (bottom right, on any Lua file):
@@ -64,7 +68,8 @@ It detects:
 - a `.luarc.json` with its own `workspace.library` (it replaces VS Code's settings),
 - an old extension version's path,
 - a runtime other than Lua 5.4,
-- other Lua extensions competing for completions.
+- other Lua extensions competing for completions,
+- a library plugin in `plugin.json` whose definitions aren't loaded.
 
 The definitions now switch on automatically whenever you open a Lua file in a folder with `plugin.json`, and your own `Lua.workspace.library` entries are kept.
 

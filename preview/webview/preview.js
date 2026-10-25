@@ -44,6 +44,9 @@
   const btnClient = h('button', { title: 'Show a mock RuneScape client behind your UI', onclick: () => setState({ showClient: !S.state.showClient }) }, 'Client');
   const btnBounds = h('button', { title: 'Outline every component, including invisible layout ones', onclick: () => setState({ showBounds: !S.state.showBounds }) }, 'Bounds');
   const btnInteract = h('button', { title: 'Interact: clicks press buttons and run their hooks. Off: clicks select components.', onclick: () => setState({ interact: !S.state.interact }) }, 'Interact');
+  // PrettyUI switch: off = base view (PrettyUI calls are stubs), on = PrettyUI runs and is drawn
+  const libInput = h('input', { type: 'checkbox', role: 'switch', onchange: e => vscode.postMessage({ type: 'setLibrary', on: e.target.checked }) });
+  const libSwitch = h('label', { class: 'switch hidden' }, libInput, h('span', { class: 'track' }, h('span', { class: 'knob' })), h('span', { class: 'switch-label' }, 'PrettyUI'));
   const btnSync = h('button', { title: 'Selecting a component jumps to the line that created it', onclick: () => setState({ syncEditor: !S.state.syncEditor }) }, 'Sync editor');
   const toolbar = h('div', { class: 'toolbar' },
     h('label', {}, 'Window', sceneSel),
@@ -54,6 +57,7 @@
     h('div', { class: 'group' }, btnClient, btnBounds, btnInteract, btnSync),
     h('div', { class: 'sep' }),
     evSel,
+    libSwitch,
     h('div', { class: 'grow' }),
     h('button', { title: 'Make or edit a PNG in resources/ (Sprite Maker)', onclick: () => vscode.postMessage({ type: 'command', id: 'rs3lua.newSprite' }) }, 'Sprites…'),
     h('button', { title: 'Design custom stylesheets (Style Studio)', onclick: () => vscode.postMessage({ type: 'command', id: 'rs3lua.styleStudio' }) }, 'Styles…'),
@@ -263,6 +267,26 @@
     return h('div', { class: 'client-chrome' }, els);
   }
 
+  /** Game sprites aren't available to the preview, so draw them by what their name says they are. */
+  function gameSpriteClass(name) {
+    const n = name.replace(/^id\.Sprite\./, '');
+    const rules = [
+      [/CLOSE_(NML|OVR|ACTIVE)|BTN_MODAL_WINDOW.*CLOSE/, 'gs-close'],
+      [/TITLE|CLOSE_CORNER/, 'gs-title'],
+      [/POSITIVE/, 'gs-btn-pos'], [/NEGATIVE/, 'gs-btn-neg'], [/BTN_MAIN/, 'gs-btn'],
+      [/SCROLLBAR_DRAGGER_V2_[012]$/, 'gs-thumb'], [/SCROLLBAR/, 'gs-track'],
+      [/SLIDER_BAR_BACKING/, 'gs-track'], [/SLIDER_BAR/, 'gs-thumb'],
+      [/TAB_CURRENT/, 'gs-tab-on'], [/TAB_/, 'gs-tab'],
+      [/SLOT/, 'gs-slot'], [/CHECKBOX|RADIO/, 'gs-check'],
+      [/CONTENT_TILE|BACKGROUND|_BG/, 'gs-fill'],
+      [/WINDOW|FRAME|BORDER|CORNER|SIDE|EDGE|DIVIDER|LINE/, 'gs-frame'],
+      [/ICON|BTN_|ARROW|INCREASE|DECREASE|ACCORDION/, 'gs-icon'],
+      [/INPUT/, 'gs-input']
+    ];
+    for (const [re, cls] of rules) if (re.test(n)) return cls;
+    return 'gs-other';
+  }
+
   function visual(c) {
     const p = c.props;
     const el = h('div', { class: 'c', 'data-id': c.id });
@@ -366,7 +390,8 @@
       }
       case 'List': case 'ComboField': {
         el.classList.add('listbox');
-        const entries = Array.isArray(p.entries) ? p.entries : [];
+        // a list, or a name -> ID map (SetEntries({ A = 1 }))
+        const entries = Array.isArray(p.entries) ? p.entries : p.entries && typeof p.entries === 'object' ? Object.keys(p.entries) : [];
         if (!entries.length) el.append(h('div', { style: { opacity: .5 } }, c.type + ' (no entries)'));
         for (const e of entries.slice(0, 40)) {
           const label = typeof e === 'object' && e ? (e.text || e.name || e.label || e.content || JSON.stringify(e)) : String(e);
@@ -376,6 +401,11 @@
       }
       case 'Sprite': case 'Model': case 'ModelGroup': case 'Canvas': case 'RadialProgressOverlay': {
         if (c.type === 'Sprite') { const art = spriteEl(p, true); if (art) { el.append(art); return el; } }
+        if (c.type === 'Sprite' && typeof p.spriteID === 'string' && /^id\.Sprite\./.test(p.spriteID)) {
+          el.classList.add('gs', gameSpriteClass(p.spriteID));
+          el.title = p.spriteID.replace(/^id\.Sprite\./, '') + ' (game sprite, drawn approximately)';
+          return el;
+        }
         el.classList.add('placeholder');
         const what = p.associatedObjectID != null ? 'obj ' + p.associatedObjectID : p.sprite != null ? 'sprite ' + p.sprite : '';
         el.append(c.type + (what ? '\n' + what : ''));
@@ -633,6 +663,17 @@
     const evs = S.data.subs.filter(s => !layer.has(s.name));
     evSel.replaceChildren(opt('', evs.length ? 'Fire event…' : 'No events subscribed', true), ...evs.map(e => opt(e.name, e.name)));
     evSel.disabled = !evs.length;
+    const lib = S.library;
+    libSwitch.classList.toggle('hidden', !lib || (!lib.uses && !lib.available));
+    if (lib) {
+      libInput.checked = !!lib.active;
+      libInput.disabled = !lib.available;
+      libSwitch.classList.toggle('disabled', !lib.available);
+      libSwitch.title = !lib.available ? lib.error
+        : (lib.active ? `${lib.name} ${lib.version || ''} is running and drawn (game sprites are approximate). Switch off for the base view.`
+          : `Base view: ${lib.name} calls do nothing. Switch on to run ${lib.name} ${lib.version || ''} from your game client and draw it.`)
+          + (lib.auto ? (lib.uses ? ' (On because plugin.json depends on it.)' : ' (Off because plugin.json does not depend on it.)') : ' (Set by you; matches plugin.json again when flipped back.)');
+    }
     syncToolbar();
   }
 
@@ -714,6 +755,7 @@
     const m = ev.data;
     if (m.type === 'render') {
       S.resources = m.resources || {};
+      S.library = m.library;
       S.data = m.data; S.scenes = m.scenes; S.state = m.state; S.cfg = m.cfg; S.resolutions = m.resolutions; S.pluginName = m.pluginName;
       S.byId = new Map(m.data.comps.map(c => [c.id, c]));
       if (S.sel && !S.byId.has(S.sel)) S.sel = null;

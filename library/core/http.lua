@@ -27,8 +27,8 @@
 HTTPRequest = {}
 
 --- Creates a new request.
--- found by probe: `path` is appended to the base URL exactly as given, with no "/" added in between.
--- `HTTPRequest.new(Plugin.urls.probe, "report")` with base "http://127.0.0.1:47321" fails with
+-- Tested on the beta client: `path` is appended to the base URL exactly as given, with no "/" added in between.
+-- `HTTPRequest.new(Plugin.urls.api, "report")` with base "http://127.0.0.1:47321" fails with
 -- errorInfo "Port number ended with 'r'".
 ---@param baseURL PluginURL Base URL from the manifest, via `Plugin.urls`.
 ---@param path? string Appended to the base URL as-is; start it with `/` unless the base URL ends with one.

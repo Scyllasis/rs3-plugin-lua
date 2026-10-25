@@ -5,7 +5,7 @@
 --- **Call `SetColumnRows` before reading `cellHeight`**: on a new grid it crashes the client.
 ---
 --- [Docs](https://developer.runescape.com/rs/ui/layout_components/grid.html)
--- found by probe: reading cellHeight on a freshly created grid (no SetColumnRows yet) crashes the beta
+-- Tested on the beta client: reading cellHeight on a freshly created grid (no SetColumnRows yet) crashes the beta
 -- client 951.1 with an integer divide by zero. cellWidth is not tested yet and is probably the same.
 ---@class ui.Grid : ui.ComponentCollection
 ---@field cellWidth integer Read-only. Probably crashes the client on a grid with no columns/rows yet (untested).

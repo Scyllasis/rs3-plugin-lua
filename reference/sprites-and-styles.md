@@ -52,13 +52,6 @@ The studio offers to add the `require` to `main.lua`. It never overwrites a `sty
 
 **IDs:** stylesheet IDs are global, and the docs don't reserve a range. Jagex's example uses 10000, so the studio starts there. Pick IDs unlikely to clash with other plugins.
 
-### Discover keys
-The docs name only `button.tint.rgb` and `button.tint.alpha`, but the game has more. **Create discovery plugin** writes a small `style_discovery` plugin next to yours. Copy it into the beta client's `dev_plugins` folder, run `prf` then `pon style_discovery` (console commands take the folder name), and paste the console output into the studio. Importing:
-
-- adds every key to the designer's key list,
-- shows the values the built-in stylesheets use (so you can see what you inherit and override it),
-- writes `.rs3/stylevalues.lua` so `ui.StyleValue.` autocompletes the real keys.
-
 ## The `.rs3` folder
 
-`.rs3/` holds editor-only data (sprite settings, style specs, discovered keys). The game never reads it, so leave it out when you upload the plugin.
+`.rs3/` holds editor-only data (sprite settings, style specs). The game never reads it, so leave it out when you upload the plugin.

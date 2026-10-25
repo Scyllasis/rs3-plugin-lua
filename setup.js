@@ -6,7 +6,8 @@ const path = require('path');
 const fs = require('fs');
 
 const LUA_EXT = 'sumneko.lua';
-const LIB_MARKER = /rs3-plugin-lua[^\\/]*[\\/]library[\\/]?$/i;
+// Our library folder, and the deps/<name> folders for library plugins (any extension version).
+const LIB_MARKER = /rs3-plugin-lua[^\\/]*[\\/](library|deps[\\/][^\\/]+)[\\/]?$/i;
 // Other extensions that also answer Lua completion requests.
 const CONFLICTS = {
   'trixnz.vscode-lua': 'vscode-lua (trixnz)',
@@ -36,6 +37,44 @@ function findPluginRoot(file) {
   } catch { return undefined; }
 }
 function hasManifest(dir) { return !!dir && fs.existsSync(path.join(dir, 'plugin.json')); }
+
+// ---------------------------------------------------------------- library plugin dependencies
+/** Library plugins we ship definitions for (deps/index.json), keyed by dependency alias. */
+function knownDeps() {
+  try { return JSON.parse(fs.readFileSync(ctx.asAbsolutePath(path.join('deps', 'index.json')), 'utf8')); } catch { return {}; }
+}
+/** plugin.json files in a folder, a few levels deep. */
+function manifestsIn(dir, depth = 3) {
+  const out = [];
+  if (hasManifest(dir)) out.push(path.join(dir, 'plugin.json'));
+  if (depth <= 0) return out;
+  let entries = [];
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
+  for (const e of entries) {
+    if (e.isDirectory() && !/^(\.|node_modules$)/.test(e.name)) out.push(...manifestsIn(path.join(dir, e.name), depth - 1));
+  }
+  return out;
+}
+/** Definition folders for the library plugins that the folder's plugin.json files depend on. */
+function depLibs(folderPath) {
+  if (!folderPath) return [];
+  const known = knownDeps();
+  const byId = new Map(Object.entries(known).map(([k, d]) => [String(d.id), k]));
+  const wanted = new Set();
+  for (const file of manifestsIn(folderPath)) {
+    let m;
+    try { m = JSON.parse(stripJsonc(fs.readFileSync(file, 'utf8'))); } catch { continue; }
+    for (const deps of [m.requiredDependencies, m.optionalDependencies]) {
+      // object form { alias: id } or array form [ name, ... ]
+      const pairs = Array.isArray(deps) ? deps.map(n => [String(n), n]) : Object.entries(deps && typeof deps === 'object' ? deps : {});
+      for (const [alias, id] of pairs) {
+        const key = known[alias.toLowerCase()] ? alias.toLowerCase() : byId.get(String(id));
+        if (key) wanted.add(key);
+      }
+    }
+  }
+  return [...wanted].sort().map(k => ctx.asAbsolutePath(path.join('deps', k)));
+}
 
 // ---------------------------------------------------------------- .luarc.json
 function stripJsonc(s) {
@@ -83,7 +122,8 @@ function diagnose(doc) {
   const effective = asArray(cfg.get('workspace.library'));
   const want = norm(lib);
   const hasCurrent = effective.some(p => norm(p) === want);
-  const stale = effective.filter(p => LIB_MARKER.test(String(p)) && norm(p) !== want);
+  const ownDeps = norm(ctx.asAbsolutePath('deps')) + path.sep;
+  const stale = effective.filter(p => LIB_MARKER.test(String(p)) && norm(p) !== want && !norm(p).startsWith(ownDeps));
   const rc = folder ? luarcFor(folder.uri.fsPath) : null;
   const rcHas = rc && rc.lib !== undefined && asArray(rc.lib).some(p => norm(path.resolve(folder.uri.fsPath, String(p))) === want);
 
@@ -96,6 +136,12 @@ function diagnose(doc) {
       : 'This file is not inside an open folder, and the RS3 definitions are not in your user settings.', loose: !folder });
   }
   if (stale.length) issues.push({ id: 'stale', severity: 'warn', msg: 'Settings still point at an older copy of this extension: ' + stale.join(', ') });
+  const loaded = p => effective.some(e => norm(e) === norm(p)) || (rc && asArray(rc.lib).some(e => norm(path.resolve(folder.uri.fsPath, String(e))) === norm(p)));
+  const missingDeps = folder ? depLibs(folder.uri.fsPath).filter(p => !loaded(p)) : [];
+  if (missingDeps.length && (hasCurrent || rcHas)) {
+    const names = missingDeps.map(p => (knownDeps()[path.basename(p)] || {}).name || path.basename(p));
+    issues.push({ id: 'depMissing', severity: 'warn', msg: `plugin.json depends on ${names.join(', ')}, but its definitions are not loaded.` });
+  }
   const rv = rc && rc.data && (rc.data['runtime.version'] || (rc.data.runtime && rc.data.runtime.version));
   const runtime = rv || cfg.get('runtime.version');
   if (runtime && runtime !== 'Lua 5.4') issues.push({ id: 'runtime', severity: 'warn', msg: `Lua runtime is set to "${runtime}"; RS3 plugins use Lua 5.4.` });
@@ -122,7 +168,7 @@ async function setLibrary(folderOrUndefined, on) {
   // A workspace value replaces the user value entirely, so start from the user's entries.
   const base = own !== undefined ? asArray(own) : target === vscode.ConfigurationTarget.Global ? [] : asArray(ins.globalValue);
   const cleaned = base.filter(p => norm(p) !== norm(lib) && !LIB_MARKER.test(String(p)));
-  const next = on ? [...cleaned, lib] : cleaned;
+  const next = on ? [...cleaned, lib, ...depLibs(folderOrUndefined && folderOrUndefined.uri.fsPath)] : cleaned;
   const same = own !== undefined && next.length === asArray(own).length && next.every((p, i) => p === asArray(own)[i]);
   if (!same) await cfg.update('workspace.library', next, target);
   if (on && cfg.get('runtime.version') !== 'Lua 5.4') await cfg.update('runtime.version', 'Lua 5.4', target);
@@ -140,7 +186,7 @@ async function patchLuarc(rc, folderPath) {
   const data = rc.data || {};
   const want = norm(libPath());
   const keep = asArray(rc.lib).filter(p => !LIB_MARKER.test(String(p)) && norm(path.resolve(folderPath, String(p))) !== want);
-  const next = [...keep, libPath()];
+  const next = [...keep, libPath(), ...depLibs(folderPath)];
   if (rc.flat) data['workspace.library'] = next;
   else { data.workspace = data.workspace || {}; data.workspace.library = next; }
   fs.writeFileSync(rc.file, JSON.stringify(data, null, 2) + '\n');
@@ -158,6 +204,7 @@ async function fixIssue(issue, doc) {
       return true;
     case 'notConfigured':
     case 'stale':
+    case 'depMissing':
       if (!folder) {
         const ok = await vscode.window.showInformationMessage(
           'This file is not in an open folder. Turn on the RS3 definitions in your user settings (all Lua files), or open the plugin folder instead?',
@@ -243,7 +290,7 @@ async function maybeAutoFix(doc) {
   const r = diagnose(doc);
   for (const issue of r.issues) {
     // quiet fixes: our own setting in an open folder
-    if ((issue.id === 'notConfigured' || issue.id === 'stale') && folder) { try { await setLibrary(folder, true); } catch (e) { console.error('[rs3lua]', e); } continue; }
+    if ((issue.id === 'notConfigured' || issue.id === 'stale' || issue.id === 'depMissing') && folder) { try { await setLibrary(folder, true); } catch (e) { console.error('[rs3lua]', e); } continue; }
     // everything else asks once per session
     const key = issue.id + ':' + (folder ? folder.uri.fsPath : doc.uri.fsPath);
     if (dismissed.has(key)) continue;
@@ -290,7 +337,11 @@ function activate(context) {
     vscode.window.onDidChangeActiveTextEditor(e => { updateStatus(); if (e) maybeAutoFix(e.document); }),
     vscode.workspace.onDidOpenTextDocument(d => maybeAutoFix(d)),
     vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('Lua') || e.affectsConfiguration('rs3lua')) updateStatus(); }),
-    vscode.workspace.onDidSaveTextDocument(d => { if (/\.luarc\.jsonc?$/.test(d.uri.fsPath)) updateStatus(); }),
+    vscode.workspace.onDidSaveTextDocument(d => {
+      if (/\.luarc\.jsonc?$/.test(d.uri.fsPath)) updateStatus();
+      // dependencies may have changed: add or drop library plugin definitions
+      if (path.basename(d.uri.fsPath) === 'plugin.json') enableFolders();
+    }),
     vscode.extensions.onDidChange(() => updateStatus())
   );
   const ed = vscode.window.activeTextEditor;

@@ -2,7 +2,7 @@
 
 From https://developer.runescape.com/rs/managing.html
 
-`<plugin>` is the plugin's **folder name** (what `plist` shows, e.g. `rs3_api_probe`), not the `name` in plugin.json. If `ppe … httpAccess` doesn't take effect, run `ppr <plugin>` first.
+`<plugin>` is the plugin's **folder name** (what `plist` shows, e.g. `rs3_item_export`), not the `name` in plugin.json. If `ppe … httpAccess` doesn't take effect, run `ppr <plugin>` first.
 
 | Command | Short | Purpose |
 |---|---|---|

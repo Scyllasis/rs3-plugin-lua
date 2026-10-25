@@ -68,6 +68,16 @@ Player.GetName = function() return "Sam" end
 
 `PersistentDB` works in memory, `log`/`print` go to the Output pane, and `formatStr` is implemented.
 
+## PrettyUI
+The **PrettyUI** switch in the toolbar decides whether the preview runs PrettyUI:
+
+- **On**: PrettyUI runs from the copy your game client already downloaded (`%ProgramData%\Jagex\RuneScape-BETA\plugins\6398181`), so its windows, panels, buttons and fields are drawn like any other UI. Clicking a PrettyUI component selects it and jumps to *your* line that created it.
+- **Off**: the base view. PrettyUI calls do nothing, so only native `ui.*` components are drawn.
+
+It is on automatically when plugin.json lists PrettyUI as a dependency and off when it doesn't. Flip it to override that for the current plugin. If the client hasn't downloaded PrettyUI yet the switch is greyed out: enable any plugin that uses it in the client once.
+
+PrettyUI draws with the game's own sprites, which the preview doesn't have, so frames, title bars, buttons, scrollbars and slots are drawn as approximations (hover one to see the sprite name).
+
 ## Custom art and styles
 
 PNGs you assign from `Plugin.resources` are drawn for real, including 9-slice `visualMargins`, tiling, flips, rotation and tint, and custom stylesheets (`ui.StyleSheets[id]`, parents, tint values) are applied. Make them with the **Sprites…** and **Styles…** buttons. See *Sprite Maker & Style Studio* for details.

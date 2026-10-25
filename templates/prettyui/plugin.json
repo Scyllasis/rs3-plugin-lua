@@ -1,0 +1,13 @@
+{
+  "name": "{{name}}",
+  "version": "0.1.0",
+  "contactEmailAddress": "you@example.com",
+  "requiredDependencies": {
+    "prettyui": 6398181
+  },
+  "optionalDependencies": {},
+  "requiredPermissions": [],
+  "optionalPermissions": [],
+  "hasRibbonIcon": true,
+  "hasSettingsIcon": true
+}

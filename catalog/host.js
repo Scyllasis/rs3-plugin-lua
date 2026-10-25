@@ -4,11 +4,11 @@ const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
 const C = require('./lib');
+const R = require('./receiver');
 
 let ctx;
 let cache = null; // merged catalog
 const file = name => path.join(ctx.globalStorageUri.fsPath, 'catalog', name);
-const port = () => vscode.workspace.getConfiguration('rs3lua.probe').get('port', 47321);
 
 function wikiData() { return C.readJson(file('wiki.json'), null); }
 function mineData() { return C.readJson(file('mine.json'), { items: [] }); }
@@ -21,7 +21,7 @@ function catalog() {
 }
 function invalidate() { cache = null; }
 
-/** Called by the probe receiver / console import for kind === "items". */
+/** Called by the receiver (HTTP or pasted console lines) with the export plugin's payload. */
 function saveExport(payload) {
   const rows = C.parseExport(payload);
   const mine = mineData();
@@ -62,14 +62,14 @@ async function updateFromWiki() {
 }
 
 async function createExport() {
+  // Straight into the client's dev_plugins folder when it exists, so there is nothing to copy.
+  const places = R.devPluginFolders().map(d => ({ label: '$(rocket) ' + d, detail: "The game client's dev_plugins folder: ready to load, nothing to copy.", dir: d }));
   const folders = vscode.workspace.workspaceFolders || [];
-  let base = folders.length ? folders[0].uri.fsPath : undefined;
-  const ed = vscode.window.activeTextEditor;
-  if (ed && ed.document.uri.scheme === 'file') {
-    const { findPluginRoot } = require('../preview/panel');
-    const root = findPluginRoot(ed.document.uri.fsPath, folders.map(f => f.uri.fsPath));
-    if (root) base = path.dirname(root);
-  }
+  if (folders.length) places.push({ label: '$(folder) ' + folders[0].uri.fsPath, detail: 'This workspace (copy it into dev_plugins yourself).', dir: folders[0].uri.fsPath });
+  places.push({ label: '$(folder-opened) Choose a folder…', dir: '' });
+  let pick = places.length === 2 && places[0].dir ? places[0] : await vscode.window.showQuickPick(places, { placeHolder: 'Where should the item export plugin go?' });
+  if (!pick) return;
+  let base = pick.dir;
   if (!base) {
     const u = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false, openLabel: 'Put rs3_item_export here' });
     if (!u || !u[0]) return;
@@ -80,15 +80,17 @@ async function createExport() {
   fs.copyFileSync(path.join(__dirname, 'items.lua'), path.join(target, 'main.lua'));
   fs.writeFileSync(path.join(target, 'plugin.json'), JSON.stringify({
     name: 'RS3 Item Export', version: '1.0.0', contactEmailAddress: 'export@example.com',
-    optionalPermissions: ['httpAccess'], urls: { probe: `http://127.0.0.1:${port()}` }
+    optionalPermissions: ['httpAccess'], urls: { vscode: `http://127.0.0.1:${R.port()}` }
   }, null, 2) + '\n');
-  const ok = await require('../probe/host').startReceiver(true);
-  const commands = require('../probe/lib').consoleCommands(path.basename(target));
+  const ok = await R.startReceiver();
+  const commands = R.consoleCommands(path.basename(target));
+  await vscode.env.clipboard.writeText(commands.join('\n'));
   const c = await vscode.window.showInformationMessage(
-    `Created the item export plugin in ${target}. ` + (ok ? `Listening on 127.0.0.1:${port()}. ` : '') +
-    `Load it on the beta (${commands.join(', ')}), then open your bank once.`,
-    'Copy console commands');
-  if (c) await vscode.env.clipboard.writeText(commands.join('\n'));
+    `Item export plugin ready in ${target}. ` + (ok ? `VS Code is listening for it. ` : '') +
+    `The console commands are on your clipboard: paste them in the game console (${commands.join(', ')}), then open your bank once.`,
+    'Copy commands again', 'Paste console output instead');
+  if (c === 'Copy commands again') await vscode.env.clipboard.writeText(commands.join('\n'));
+  if (c === 'Paste console output instead') vscode.commands.executeCommand('rs3lua.catalog.import');
 }
 
 // ---------------------------------------------------------------- Find Item
@@ -147,6 +149,7 @@ function byConfigName() {
 
 function activate(context) {
   ctx = context;
+  R.activate(context, saveExport);
   const sel = { language: 'lua' };
   context.subscriptions.push(
     vscode.commands.registerCommand('rs3lua.findItem', findItem),

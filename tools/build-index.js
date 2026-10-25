@@ -1,10 +1,12 @@
 // Builds api-index.json (used by the API Explorer / search / docs lookup)
-// by parsing the LuaLS annotation files in ../library.
+// by parsing the LuaLS annotation files in ../library and ../deps/<library plugin>.
 'use strict';
 const fs = require('fs');
 const path = require('path');
 
 const LIB = path.join(__dirname, '..', 'library');
+const DEPS = path.join(__dirname, '..', 'deps');
+const DEP_INFO = JSON.parse(fs.readFileSync(path.join(DEPS, 'index.json'), 'utf8'));
 const OUT = path.join(__dirname, '..', 'api-index.json');
 const DOCS_BASE = 'https://developer.runescape.com/rs/';
 
@@ -17,6 +19,7 @@ const GROUPS = [
   { id: 'config', label: 'Config types', icon: 'database', docs: 'game/index.html' },
   { id: 'math', label: 'Math', icon: 'symbol-numeric', docs: 'math/index.html' },
   { id: 'ui', label: 'UI', icon: 'layout', docs: 'ui/index.html' },
+  ...Object.entries(DEP_INFO).map(([id, d]) => ({ id, label: d.name + ' (library plugin)', icon: 'extensions', docs: d.docs, description: d.description })),
   { id: 'other', label: 'Other', icon: 'question' }
 ];
 const DIR_GROUP = { core: 'core', game: 'game', config: 'config', entity: 'entity', math: 'math', ui: 'ui', ui2: 'ui' };
@@ -40,6 +43,8 @@ function add(e) {
   if (!e.docs && currentFileDocs) e.docs = currentFileDocs;
   const prev = entries.get(e.full);
   if (prev) { // merge: keep the richer one
+    // a field typed as a module class (prettyui.Window) takes the class's own docs when the class is seen
+    if (prev.kind === 'field' && e.kind === 'class') for (const k of ['docs', 'doc']) if (e[k]) prev[k] = e[k];
     for (const k of Object.keys(e)) if (e[k] && !prev[k]) prev[k] = e[k];
     if (e.kind !== 'class' && prev.kind === 'class' && e.kind === 'global') {}
     return prev;
@@ -48,12 +53,13 @@ function add(e) {
   return e;
 }
 
-for (const file of walk(LIB)) {
-  const rel = path.relative(LIB, file).split(path.sep);
-  const fileGroup = DIR_GROUP[rel[0]] || 'other';
+const FILES = [...walk(LIB).map(file => ({ file, group: DIR_GROUP[path.relative(LIB, file).split(path.sep)[0]] || 'other' })),
+  ...Object.keys(DEP_INFO).flatMap(id => walk(path.join(DEPS, id)).map(file => ({ file, group: id })))];
+for (const { file, group: fileGroup } of FILES) {
   const raw = fs.readFileSync(file, 'utf8');
   const fdm = raw.match(/\[Docs\]\((https?:[^)#]+)/);
-  currentFileDocs = fdm ? relDocs(fdm[1]) : undefined;
+  // library plugins keep one file with a docs anchor per class, so entries inherit from their class instead
+  currentFileDocs = fdm && !(fileGroup in DEP_INFO) ? relDocs(fdm[1]) : undefined;
   const src = raw.split(/\r?\n/);
   let block = { doc: [], params: [], returns: [], fields: [], cls: null, enumName: null, alias: null, docsUrl: null };
   let inEnum = null;

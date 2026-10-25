@@ -1,8 +1,8 @@
 {
   "name": "rs3-plugin-lua",
   "displayName": "RS3 Plugin API (Lua)",
-  "description": "Autocomplete, hover docs, an API explorer, a live UI preview, a sprite maker and a style studio for RuneScape 3 Plugin Hub Lua plugins.",
-  "version": "0.6.1",
+  "description": "Autocomplete, hover docs, an API explorer, a live UI preview, a sprite maker and a style studio for RuneScape 3 Plugin Hub Lua plugins, with PrettyUI support.",
+  "version": "0.7.0",
   "publisher": "sam-local",
   "license": "MIT",
   "engines": {
@@ -43,7 +43,7 @@
       },
       {
         "command": "rs3lua.newPlugin",
-        "title": "RS3: New Plugin\u2026",
+        "title": "RS3: New Plugin…",
         "category": "RS3"
       },
       {
@@ -59,7 +59,7 @@
       },
       {
         "command": "rs3lua.searchApi",
-        "title": "RS3: Search API\u2026",
+        "title": "RS3: Search API…",
         "category": "RS3",
         "icon": "$(search)"
       },
@@ -80,7 +80,7 @@
       },
       {
         "command": "rs3lua.cheats",
-        "title": "RS3: Show Developer Cheats & Console Commands",
+        "title": "RS3: Copy a Cheat or Console Command…",
         "category": "RS3",
         "icon": "$(terminal)"
       },
@@ -92,7 +92,7 @@
       },
       {
         "command": "rs3lua.newSprite",
-        "title": "RS3: New Sprite\u2026",
+        "title": "RS3: New Sprite…",
         "category": "RS3",
         "icon": "$(paintcan)"
       },
@@ -115,29 +115,8 @@
         "icon": "$(pulse)"
       },
       {
-        "command": "rs3lua.probe.create",
-        "title": "RS3: Create API Probe Plugin (test the API on the beta)",
-        "category": "RS3",
-        "icon": "$(beaker)"
-      },
-      {
-        "command": "rs3lua.probe.receive",
-        "title": "RS3: Start Probe Receiver",
-        "category": "RS3"
-      },
-      {
-        "command": "rs3lua.probe.import",
-        "title": "RS3: Import Probe Output (console text)",
-        "category": "RS3"
-      },
-      {
-        "command": "rs3lua.probe.report",
-        "title": "RS3: Show Last Probe Report",
-        "category": "RS3"
-      },
-      {
         "command": "rs3lua.findItem",
-        "title": "RS3: Find Item\u2026",
+        "title": "RS3: Find Item…",
         "category": "RS3",
         "icon": "$(search-fuzzy)"
       },
@@ -150,6 +129,11 @@
         "command": "rs3lua.catalog.createExport",
         "title": "RS3: Create Item Export Plugin (your bank/backpack/worn items)",
         "category": "RS3"
+      },
+      {
+        "command": "rs3lua.catalog.import",
+        "title": "RS3: Import Item Export Output (console text)",
+        "icon": "$(clippy)"
       },
       {
         "command": "rs3lua.catalog.clear",
@@ -213,11 +197,6 @@
         },
         {
           "command": "rs3lua.checkSetup",
-          "when": "view == rs3lua.explorer",
-          "group": "navigation"
-        },
-        {
-          "command": "rs3lua.probe.create",
           "when": "view == rs3lua.explorer",
           "group": "navigation"
         }
@@ -366,12 +345,17 @@
           "pattern": "^\\d+\\s*x\\s*\\d+$",
           "markdownDescription": "Size the preview uses for the plugin settings window (`Event.SettingsLayerReady`)."
         },
-        "rs3lua.probe.port": {
+        "rs3lua.itemExport.port": {
           "type": "number",
           "default": 47321,
           "minimum": 1024,
           "maximum": 65535,
-          "markdownDescription": "Local port the RS3 API Probe sends results to (`http://127.0.0.1:<port>`). Recreate the probe plugin after changing it."
+          "markdownDescription": "Local port the item export plugin sends your items to (`http://127.0.0.1:<port>`). Create the export plugin again after changing it."
+        },
+        "rs3lua.devPluginsFolder": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The game client's `dev_plugins` folder. Leave empty to find it automatically (`%ProgramData%\\Jagex\\RuneScape-BETA\\dev_plugins` or `RuneScape\\dev_plugins`)."
         }
       }
     },

@@ -64,12 +64,6 @@ pre.code { margin: 0; padding: 8px; background: var(--vscode-textCodeBlock-backg
 .card .meta code { font-size: 12px; word-break: break-all; }
 .badge { font-size: 10.5px; padding: 1px 6px; border-radius: 8px; background: var(--vscode-badge-background, #4d4d4d); color: var(--vscode-badge-foreground, #fff); }
 
-/* discover */
-.discover { padding: 14px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
-.discover ol { margin: 0; padding-left: 18px; line-height: 1.6; }
-.discover .catalog { grid-column: 1 / -1; }
-.discover table { border-collapse: collapse; width: 100%; font-size: 12px; }
-.discover td, .discover th { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--vscode-panel-border, #2a2a2a); font-family: var(--vscode-editor-font-family, monospace); }
 .result.ok { color: var(--vscode-testing-iconPassed, #73c991); }
 .result.bad { color: var(--vscode-editorError-foreground, #f14c4c); }
 

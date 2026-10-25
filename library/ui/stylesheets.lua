@@ -15,7 +15,7 @@ local StyleSheet = {}
 ---
 --- **Crashes the client for keys of 2^31 and above** (beta client 951.1). Some numbers under
 --- `ui.StyleValue` are that large, so don't pass every number found there.
--- found by probe: GetValue with the 11 ui.StyleValue numbers in 0..2^31-1 works on BUTTON_DEFAULT;
+-- Tested on the beta client: GetValue with the 11 ui.StyleValue numbers in 0..2^31-1 works on BUTTON_DEFAULT;
 -- with all 17 the client crashes with an access violation (a signed 32-bit index out of range).
 -- Indexing (sheet[key]), SetValue and HasValue with such keys are not tested yet.
 ---@param property integer Preferably a `ui.StyleValue` key; must be in 0..2^31-1.
@@ -50,8 +50,7 @@ function ui.StyleSheets:Find(styleSheetID) end
 function ui.StyleSheets:Contains(styleSheetID) end
 
 --- Style property keys, used to index a stylesheet: `sheet[ui.StyleValue.button.tint.rgb] = 0xFF0000`.
---- The docs only name `button.tint.rgb` and `button.tint.alpha`. Run the Style Studio's
---- "Discover keys" script in the dev client to add the rest to autocomplete.
+--- The docs only name `button.tint.rgb` and `button.tint.alpha`.
 ---
 --- [Docs](https://developer.runescape.com/rs/ui/stylesheets.html)
 ---@class ui.StyleValueKeys

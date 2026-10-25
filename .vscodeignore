@@ -3,3 +3,4 @@ tools/**
 **/*.map
 .vscode/**
 *.vsix
+.gitignore

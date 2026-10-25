@@ -17,7 +17,8 @@ local function userFrame(start)
   for lvl = start or 3, 60 do
     local info = debug.getinfo(lvl, "Sl")
     if not info then break end
-    if info.source:sub(1, 1) == "@" then return info.source:sub(2), info.currentline end
+    -- library plugin code (@__lib/...) is skipped so components point at the plugin line that asked for them
+    if info.source:sub(1, 1) == "@" and info.source:sub(1, 7) ~= "@__lib/" then return info.source:sub(2), info.currentline end
   end
   return nil, nil
 end
@@ -35,6 +36,22 @@ local function warnOnce(key, msg, file, line)
 end
 
 ---------------------------------------------------------------- stubs
+-- id.Sprite.X and the like are numbers in the game, and libraries check that (type(v) == "number"),
+-- so the preview hands out stable stand-in integers and maps them back to names for drawing.
+local SYN_BASE = 0x7A000000
+local synByName, nameBySyn, synCount = {}, {}, 0
+local function synthetic(name)
+  local v = synByName[name]
+  if not v then
+    synCount = synCount + 1
+    v = SYN_BASE + synCount
+    synByName[name], nameBySyn[v] = v, name
+  end
+  return v
+end
+local function idName(v) return type(v) == "number" and nameBySyn[v] or nil end
+__rs3_idName = idName
+
 local NAME = {}
 local stubMT = {}
 local function stub(name) return setmetatable({ [NAME] = name }, stubMT) end
@@ -42,6 +59,7 @@ local function isStub(v) return getmetatable(v) == stubMT end
 local function stubName(v) return rawget(v, NAME) end
 stubMT.__index = function(t, k)
   if type(k) == "number" then return nil end
+  if k == "id" then return synthetic(rawget(t, NAME)) end -- config.Obj.LOGS.id is an integer in-game
   local s = stub(rawget(t, NAME) .. "." .. tostring(k))
   rawset(t, k, s)
   return s
@@ -77,6 +95,7 @@ encode = function(v, depth, seen)
   if t == "nil" then return "null"
   elseif t == "boolean" then return v and "true" or "false"
   elseif t == "number" then
+    if nameBySyn[v] then return jsonStr(nameBySyn[v]) end
     if v ~= v or v == math.huge or v == -math.huge then return "null" end
     return math.type(v) == "integer" and tostring(v) or string.format("%.6g", v)
   elseif t == "string" then return jsonStr(v)
@@ -92,7 +111,8 @@ encode = function(v, depth, seen)
     local n = #v
     local out = {}
     if n > 0 then
-      for i = 1, math.min(n, 200) do out[#out + 1] = encode(v[i], depth + 1, seen) end
+      -- the component list itself can be long (library UIs use hundreds); nested arrays stay capped
+      for i = 1, math.min(n, depth <= 1 and 20000 or 200) do out[#out + 1] = encode(v[i], depth + 1, seen) end
       seen[v] = nil
       return "[" .. table.concat(out, ",") .. "]"
     end
@@ -478,6 +498,7 @@ local SHEETK = {}
 local sheets, sheetOrder = {}, {}
 local function sheetKey(id)
   if isStub(id) then return stubName(id) end
+  if idName(id) then return idName(id) end
   if type(id) == "table" and rawget(id, SHEETK) then return rawget(id, SHEETK).key end
   return tostring(id)
 end
@@ -546,7 +567,7 @@ end
 ui.Interfaces = setmetatable({
   GetComponent = function(self, id)
     local root = gameRoot()
-    local name = tostring(id)
+    local name = idName(id) or tostring(id)
     if not name:find("PLUGIN_BUILD_LAYER") then
       local file, line = userFrame(3)
       warnOnce("iface:" .. name, "ui.Interfaces:GetComponent(" .. name .. ") is drawn as the full game window in the preview; the real interface may be smaller.", file, line)
@@ -559,7 +580,20 @@ for name, tbl in pairs(__rs3_pendingEnums or {}) do
   if first == "ui" then rawset(ui, rest, tbl) end
 end
 
--- remaining API globals become stubs (Player, Inventory, id, var, config, …)
+-- id.<Kind>.<NAME>: stand-in integers (see synthetic)
+id = setmetatable({}, { __index = function(t, kind)
+  if type(kind) ~= "string" then return nil end
+  local k = setmetatable({}, { __index = function(tt, n)
+    if type(n) ~= "string" then return nil end
+    local v = synthetic("id." .. kind .. "." .. n)
+    rawset(tt, n, v)
+    return v
+  end })
+  rawset(t, kind, k)
+  return k
+end })
+
+-- remaining API globals become stubs (Player, Inventory, var, config, …)
 for _, name in ipairs(__rs3_globals) do
   if rawget(_G, name) == nil then _G[name] = stub(name) end
 end
@@ -595,7 +629,11 @@ local function guarded(fn, ...)
     local file, line = userFrame(2)
     local msg = tostring(err)
     local f2, l2 = msg:match("^([^:]+%.lua):(%d+):")
-    if f2 then file, line = f2, tonumber(l2) end
+    if f2 and f2:sub(1, 6) == "__lib/" then
+      -- raised inside a library plugin: report it at the plugin line that called the library
+      local lib = f2:match("^__lib/([^/]+)/") or "library"
+      msg = lib .. ": " .. msg:gsub("^[^:]+%.lua:%d+:%s*", "")
+    elseif f2 then file, line = f2, tonumber(l2) end
     addLog("error", msg, file, line)
     return err
   end, ...))
@@ -624,6 +662,39 @@ function require(mod)
   if r == nil then r = true end
   loaded[mod] = r
   return r
+end
+
+-- Library plugins (PrettyUI): run the library's main.lua in its own environment, with its own
+-- require namespace (files under prefix) and Plugin, and hand its result to the plugin as a global.
+function __rs3_loadLibrary(alias, prefix)
+  local env = setmetatable({}, { __index = _ENV })
+  local libLoaded = {}
+  local function loadLib(path)
+    local src = readFile(prefix .. path)
+    if not src then return nil, "file not found: " .. prefix .. path end
+    return load(src, "@" .. prefix .. path, "t", env)
+  end
+  env.require = function(mod)
+    if libLoaded[mod] ~= nil then return libLoaded[mod] end
+    if package.loaded[mod] ~= nil then return package.loaded[mod] end
+    local fn, err = loadLib(mod:gsub("%.", "/") .. ".lua")
+    if not fn then fn = loadLib(mod:gsub("%.", "/") .. "/init.lua") end
+    if not fn then error("module '" .. mod .. "' not found in " .. alias .. " (" .. tostring(err) .. ")", 2) end
+    local r = fn(mod)
+    if r == nil then r = true end
+    libLoaded[mod] = r
+    return r
+  end
+  env.Plugin = setmetatable({ resources = stub(alias .. ".resources"), urls = stub(alias .. ".urls") }, { __index = Plugin })
+  local fn, err = loadLib("main.lua")
+  if not fn then addLog("error", alias .. ": " .. tostring(err)); return false end
+  local ok, result = guarded(fn)
+  if not ok then
+    addLog("error", alias .. " failed to start in the preview, so its components are stubs. Turn the " .. alias .. " switch off to hide this.")
+    return false
+  end
+  _G[alias] = result
+  return true
 end
 
 function __rs3_runFile(path, optional)

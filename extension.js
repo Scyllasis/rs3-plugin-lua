@@ -163,8 +163,13 @@ async function newPlugin(context) {
     { label: 'Workspace root', sub: '' }
   ], { placeHolder: 'Where should the plugin files go?' });
   if (!where) return;
+  const kind = await vscode.window.showQuickPick([
+    { label: 'Plain RS3 API', detail: 'Builds UI with the client\'s own ui.* components.', tpl: 'basic' },
+    { label: 'With PrettyUI', detail: 'Adds the PrettyUI library plugin (ID 6398181) as a dependency: windows, panels, buttons and fields with flow layout. Completions for prettyui.* turn on automatically.', tpl: 'prettyui' }
+  ], { placeHolder: 'Which UI style?' });
+  if (!kind) return;
   const dir = vscode.Uri.joinPath(folder.uri, where.sub);
-  const tplDir = context.asAbsolutePath('templates');
+  const tplDir = context.asAbsolutePath(path.join('templates', kind.tpl));
   const fill = s => s.replace(/\{\{name\}\}/g, name.trim()).replace(/\{\{slug\}\}/g, slug);
   const files = fs.readdirSync(tplDir);
   for (const f of files) {
@@ -180,10 +185,66 @@ async function newPlugin(context) {
   await vscode.window.showTextDocument(doc);
 }
 
+// ---------------------------------------------------------------- Cheats & console commands
+/** Rows of the command tables in reference/cheats.md and reference/console-commands.md. */
+function consoleCommandRows(context) {
+  const read = f => { try { return fs.readFileSync(context.asAbsolutePath(path.join('reference', f)), 'utf8'); } catch { return ''; } };
+  const cells = line => line.split('|').slice(1, -1).map(c => c.trim());
+  const rows = [];
+  for (const line of read('cheats.md').split(/\r?\n/)) {
+    const c = cells(line);
+    if (c.length !== 3 || !c[1].startsWith('`!')) continue;
+    rows.push({ text: c[1].split(' / ')[0].replace(/`/g, ''), desc: c[2].replace(/`/g, ''), kind: 'Cheat (beta worlds only)', file: 'cheats.md' });
+  }
+  for (const line of read('console-commands.md').split(/\r?\n/)) {
+    const c = cells(line);
+    if (c.length !== 3 || !c[0].startsWith('`')) continue;
+    const full = c[0].replace(/`/g, ''), short = c[1].replace(/`/g, '');
+    const args = full.split(' ').slice(1).join(' ');
+    rows.push({ text: short ? (short + (args ? ' ' + args : '')) : full, desc: c[2] + (short ? ` (${full.split(' ')[0]})` : ''), kind: 'Plugin console command', file: 'console-commands.md' });
+  }
+  return rows;
+}
+
+/** Pick a cheat or console command, fill in its <arguments>, and copy it for the client console. */
+async function pickConsoleCommand(context) {
+  const docsBtn = { iconPath: new vscode.ThemeIcon('book'), tooltip: 'Open the full reference' };
+  const qp = vscode.window.createQuickPick();
+  qp.placeholder = 'Search cheats and console commands (Enter copies it for the client console)';
+  qp.matchOnDescription = true;
+  qp.matchOnDetail = true;
+  let last;
+  qp.items = consoleCommandRows(context).map(r => {
+    const sep = r.kind !== last ? [{ label: r.kind, kind: vscode.QuickPickItemKind.Separator }] : [];
+    last = r.kind;
+    return [...sep, { label: r.text, detail: r.desc, buttons: [docsBtn], row: r }];
+  }).flat();
+  qp.onDidTriggerItemButton(ev => {
+    qp.hide();
+    vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.file(context.asAbsolutePath(path.join('reference', ev.item.row.file))));
+  });
+  const picked = await new Promise(resolve => {
+    qp.onDidAccept(() => { resolve(qp.selectedItems[0]); qp.hide(); });
+    qp.onDidHide(() => { resolve(undefined); qp.dispose(); });
+    qp.show();
+  });
+  if (!picked) return;
+  let text = picked.row.text;
+  // ask for each <argument>; [optional] ones may be left empty
+  for (const m of [...text.matchAll(/<([^>]+)>|\[([^\]]+)\]/g)]) {
+    const optional = !!m[2];
+    const v = await vscode.window.showInputBox({ title: picked.row.text, prompt: (m[1] || m[2]) + (optional ? ' (optional, Enter to skip)' : ''), placeHolder: m[1] || m[2] });
+    if (v === undefined) return;
+    text = text.replace(m[0], v.trim());
+  }
+  text = text.replace(/\s+/g, ' ').trim();
+  await vscode.env.clipboard.writeText(text);
+  vscode.window.setStatusBarMessage(`$(clippy) Copied "${text}": paste it in the client console`, 5000);
+}
+
 // ---------------------------------------------------------------- activate
 function activate(context) {
   setup.activate(context);
-  require('./probe/host').activate(context);
   require('./catalog/host').activate(context);
   loadIndex(context);
   const tree = new ApiTree(context);
@@ -207,13 +268,7 @@ function activate(context) {
       if (e && e.docs) openUrl(docsUrl(e.docs));
       else vscode.window.showInformationMessage('No RS3 API docs found for that symbol.');
     }),
-    vscode.commands.registerCommand('rs3lua.cheats', async () => {
-      const pick = await vscode.window.showQuickPick([
-        { label: 'Developer cheats (beta world)', file: 'cheats.md' },
-        { label: 'Plugin console commands', file: 'console-commands.md' }
-      ]);
-      if (pick) vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.file(context.asAbsolutePath(path.join('reference', pick.file))));
-    }),
+    vscode.commands.registerCommand('rs3lua.cheats', () => pickConsoleCommand(context)),
     vscode.commands.registerCommand('rs3lua.preview', async (uri) => {
       const { PreviewPanel, findPluginRoot } = require('./preview/panel');
       const roots = (vscode.workspace.workspaceFolders || []).map(f => f.uri.fsPath);

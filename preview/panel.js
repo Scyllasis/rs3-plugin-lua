@@ -4,6 +4,7 @@ const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
 const { Session, findPreviews } = require('./engine');
+const Libraries = require('./libraries');
 
 const RESOLUTIONS = ['1280x720', '1366x768', '1600x900', '1920x1080', '2560x1440', '3440x1440', '3840x2160'];
 
@@ -118,6 +119,8 @@ class PreviewPanel {
   post(m) { this.panel.webview.postMessage(m); }
 
   readFile(rel) {
+    const lib = String(rel).match(/^__lib\/([^/]+)\/(.+)$/);
+    if (lib) { const v = this.libFiles && this.libFiles[lib[1]] && this.libFiles[lib[1]][lib[2]]; return v == null ? null : v; }
     const clean = path.posix.normalize(String(rel).replace(/\\/g, '/'));
     if (clean.startsWith('..') || path.isAbsolute(clean)) return null;
     const abs = path.join(this.root, clean);
@@ -198,22 +201,48 @@ class PreviewPanel {
     this.session = await Session.create({
       indexPath: path.join(this.context.extensionPath, 'api-index.json'),
       readFile: r => this.readFile(r),
-      cfg, scene
+      cfg, scene, libraries: this.libraryLoad()
     });
     await this.send(previews, cfg);
   }
 
   async send(previews, cfg) {
     const data = await this.session.dump();
+    const lib = this.libraryInfo();
+    if (lib.uses && !lib.available) data.logs.unshift({ kind: 'warn', msg: lib.error + ' Until then PrettyUI components are not drawn.' });
+    else if (lib.uses && !lib.active) data.logs.unshift({ kind: 'info', msg: 'PrettyUI is switched off: its components are not drawn (base view). Turn the PrettyUI switch on to draw them.' });
     this.lastSubs = data.subs;
     if (previews) this.lastPreviews = previews;
     const scenes = this.scenes(this.lastPreviews || [], data.subs);
     this.reportDiagnostics(data.logs, data.comps);
     this.panel.title = 'RS3 UI Preview: ' + path.basename(this.root);
     this.post({
-      type: 'render', data, scenes, state: this.state, cfg: cfg || this.cfg(), resources: this.resources(),
+      type: 'render', data, scenes, state: this.state, library: this.libraryInfo(), cfg: cfg || this.cfg(), resources: this.resources(),
       resolutions: RESOLUTIONS, pluginName: this.pluginName()
     });
+  }
+
+  manifest() {
+    try { return JSON.parse(fs.readFileSync(path.join(this.root, 'plugin.json'), 'utf8')); } catch { return {}; }
+  }
+
+  /** The PrettyUI switch: on by default when plugin.json depends on it, and only if the client has it. */
+  libraryInfo() {
+    const key = 'prettyui';
+    const uses = Libraries.dependsOn(this.manifest(), key);
+    const found = Libraries.find(key);
+    const override = (this.state.libraries || {})[this.root];
+    const want = override === undefined ? uses : !!override;
+    return { key, name: Libraries.LIBS[key].name, uses, available: !found.error, error: found.error, version: found.version,
+      active: want && !found.error, auto: override === undefined };
+  }
+
+  libraryLoad() {
+    const info = this.libraryInfo();
+    this.libFiles = {};
+    if (!info.active) return [];
+    this.libFiles[info.key] = Libraries.find(info.key).files;
+    return [info.key];
   }
 
   pluginName() {
@@ -236,7 +265,7 @@ class PreviewPanel {
       if (STYLED.has(c.type) && !c.props.stylesheetID) add('no stylesheetID, so it is drawn invisible in-game.');
     }
     for (const l of logs) {
-      if (!l.file || !l.line || (l.kind !== 'error' && l.kind !== 'warn')) continue;
+      if (!l.file || !l.line || (l.kind !== 'error' && l.kind !== 'warn') || l.file.startsWith('__lib/')) continue;
       const uri = vscode.Uri.file(path.join(this.root, l.file));
       const line = Math.max(0, l.line - 1);
       const d = new vscode.Diagnostic(new vscode.Range(line, 0, line, 999),
@@ -262,6 +291,15 @@ class PreviewPanel {
         break;
       }
       case 'rerun': this.rebuild(); break;
+      case 'setLibrary': {
+        const libs = Object.assign({}, this.state.libraries);
+        // back to automatic when the choice matches what plugin.json says
+        if (!!m.on === this.libraryInfo().uses) delete libs[this.root]; else libs[this.root] = !!m.on;
+        this.state.libraries = libs;
+        this.saveState();
+        this.rebuild();
+        break;
+      }
       case 'fireHook':
         this.queue = this.queue.then(async () => { if (this.session) { await this.session.fireHook(m.id, m.hook); await this.send(); } });
         break;

@@ -5,7 +5,7 @@
 -- Open your bank once while this is enabled so the bank is included.
 --
 -- HTTP: grant it with   ppr rs3_item_export   ppe rs3_item_export httpAccess   then   prl rs3_item_export
--- Without HTTP it prints RS3P|… lines; copy them and run "RS3: Import Probe Output" in VS Code.
+-- Without HTTP it prints RS3X|… lines; copy them and run "RS3: Import Item Export Output" in VS Code.
 
 local RUN = tostring(math.random(100000, 999999))
 local INVS = { "INV", "WORN", "BANK" }
@@ -60,18 +60,18 @@ local outQueue = {}
 local sends = 0
 local function send()
   sends = sends + 1
-  local json = enc({ probe = "rs3", run = RUN, kind = "items", items = items, counts = counts })
+  local json = enc({ source = "rs3-item-export", run = RUN, kind = "items", items = items, counts = counts })
   local canHttp = false
-  pcall(function() canHttp = Plugin.urls.probe ~= nil and Plugin.HasPermission(PluginPermissions.httpAccess) end)
+  pcall(function() canHttp = Plugin.urls.vscode ~= nil and Plugin.HasPermission(PluginPermissions.httpAccess) end)
   local function toConsole()
     local CHUNK, n = 800, math.ceil(#json / 800)
-    for i = 1, n do outQueue[#outQueue + 1] = "RS3P|" .. RUN .. "|items" .. sends .. "|" .. i .. "/" .. n .. "|" .. json:sub((i - 1) * CHUNK + 1, i * CHUNK) end
-    log("RS3 Item Export: printing " .. n .. " RS3P lines for VS Code.")
+    for i = 1, n do outQueue[#outQueue + 1] = "RS3X|" .. RUN .. "|items" .. sends .. "|" .. i .. "/" .. n .. "|" .. json:sub((i - 1) * CHUNK + 1, i * CHUNK) end
+    log("RS3 Item Export: printing " .. n .. " RS3X lines for VS Code.")
   end
   if canHttp then
     local ok = pcall(function()
       -- the client appends the path to the base URL as-is, so it needs the leading "/"
-      local req = HTTPRequest.new(Plugin.urls.probe, "/items")
+      local req = HTTPRequest.new(Plugin.urls.vscode, "/items")
       req:AddHeader("Content-Type", "application/json")
       req:Post(json, function(r)
         if r.successful then log(formatStr("RS3 Item Export: sent {} items to VS Code.", #items)) else toConsole() end

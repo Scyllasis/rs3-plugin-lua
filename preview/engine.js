@@ -73,7 +73,8 @@ function findPreviews(files) {
 
 /**
  * A live session: one Lua state with the plugin loaded and one scene run.
- * opts: { indexPath, readFile(rel)->string|null, cfg:{screenW,screenH,...}, scene:{id,kind,...} }
+ * opts: { indexPath, readFile(rel)->string|null, cfg:{screenW,screenH,...}, scene:{id,kind,...}, libraries?:[alias] }
+ * Library files are read through readFile as __lib/<alias>/<path>.
  */
 class Session {
   static async create(opts) {
@@ -81,7 +82,7 @@ class Session {
     await s._init(opts);
     return s;
   }
-  async _init({ indexPath, readFile, cfg, scene }) {
+  async _init({ indexPath, readFile, cfg, scene, libraries }) {
     const api = loadApiData(indexPath);
     const factory = await getFactory();
     this.lua = await factory.createEngine({ injectObjects: false, enableProxy: false, traceAllocations: false });
@@ -99,7 +100,9 @@ class Session {
     await this.lua.doString(prelude);
     await this._run(RUNTIME, '=rs3runtime');
     await this.lua.doString('__rs3_runFile("rs3preview.lua", true)');
-    await this.lua.doString('__rs3_gameRoot(); __rs3_runFile("main.lua")');
+    await this.lua.doString('__rs3_gameRoot()');
+    for (const alias of libraries || []) await this.lua.doString(`__rs3_loadLibrary(${toLua(alias)}, ${toLua('__lib/' + alias + '/')})`);
+    await this.lua.doString('__rs3_runFile("main.lua")');
     if (scene && scene.kind !== 'game') await this.lua.doString('__rs3_runScene(' + toLua(scene) + ')');
   }
   async _run(src, name) {

@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const vscode = acquireVsCodeApi();
-  const S = { spec: { styles: [] }, catalog: { keys: {}, sheets: {} }, builtins: [], docKeys: [], discovery: '', plugin: '',
+  const S = { spec: { styles: [] }, catalog: { keys: {}, sheets: {} }, builtins: [], docKeys: [], plugin: '',
     tab: 'mine', sel: 0, dirty: false, code: '', savedModule: 'styles' };
 
   function h(tag, attrs, ...kids) {
@@ -98,7 +98,7 @@
   const tabs = {};
   const views = {};
   const tabbar = h('div', { class: 'tabs', role: 'tablist' }, h('span', { class: 'title' }));
-  for (const [id, label] of [['mine', 'My styles'], ['gallery', 'Built-in gallery'], ['discover', 'Discover keys']]) {
+  for (const [id, label] of [['mine', 'My styles'], ['gallery', 'Built-in gallery']]) {
     tabs[id] = h('button', { class: 'tab', role: 'tab', onclick: () => { S.tab = id; render(); } }, label);
     tabbar.append(tabs[id]);
     views[id] = h('div', { class: 'view', role: 'tabpanel' });
@@ -189,7 +189,7 @@
       return h('tr', {},
         h('td', { style: { width: '45%' } }, h('input', { class: 'key', list: 'keys', value: v.key || '', placeholder: 'button.tint.rgb',
           onchange: e => { v.key = e.target.value.trim(); markDirty(); renderMine(); } }),
-          v.key && !known ? h('div', { class: 'warn' }, 'Not a known key. Run Discover keys to check it exists.') : null),
+          v.key && !known ? h('div', { class: 'warn' }, 'Not a documented key. Check it in-game before relying on it.') : null),
         h('td', {}, h('div', { class: 'valcell' }, num, extra, hexOut)),
         h('td', { class: 'inh' }, v.key && v.key in inherited ? 'parent: ' + fmtVal(v.key, inherited[v.key]) : ''),
         h('td', {}, h('button', { class: 'icon', title: 'Remove', onclick: () => { style.values.splice(i, 1); markDirty(); renderMine(); } }, '✕')));
@@ -209,8 +209,8 @@
         h('div', { class: 'row', style: { marginTop: '8px' } },
           h('button', { onclick: () => { style.values = style.values || []; style.values.push({ key: compOf(base) === 'Button' && !style.values.some(v => v.key === 'button.tint.rgb') ? 'button.tint.rgb' : '', value: compOf(base) === 'Button' ? 0xC8A24A : '' }); markDirty(); renderMine(); } }, '+ Add value')),
         h('div', { class: 'hint', style: { marginTop: '6px' } },
-          'The docs only list button.tint.rgb and button.tint.alpha. Other keys exist in the game; use Discover keys to list them and their default values. Stylesheets only hold integers (colours as 0xRRGGBB).')),
-      inheritedRows.length ? h('div', {}, h('h3', {}, `Inherited from ${base} (discovered)`),
+          'The docs only list button.tint.rgb and button.tint.alpha. Other keys may exist in the game but are undocumented. Stylesheets only hold integers (colours as 0xRRGGBB).')),
+      inheritedRows.length ? h('div', {}, h('h3', {}, `Inherited from ${base}`),
         h('table', { class: 'props' }, inheritedRows.map(([k, val]) => h('tr', {}, h('td', {}, k), h('td', { class: 'inh' }, fmtVal(k, val)),
           h('td', {}, h('button', { onclick: () => { style.values.push({ key: k, value: val }); markDirty(); renderMine(); } }, 'Override')))))) : null,
       chain.length > 1 ? h('div', { class: 'hint' }, 'Chain: ' + chain.map(s => s.name).join(' → ') + (base ? ' → ' + base : '')) : null);
@@ -258,51 +258,18 @@
               h('button', { onclick: () => addStyle(id) }, 'New style from this'))))))))));
   }
 
-  // ---------------------------------------------------------------- Discover
-  const pasteArea = h('textarea', { rows: 10, placeholder: 'Paste the console output here (lines with SV| and SS|)…' });
-  const resultLine = h('div', { class: 'result' });
-  function renderDiscover() {
-    const keys = Object.entries(S.catalog.keys).sort((a, b) => a[0].localeCompare(b[0]));
-    const sheets = Object.entries(S.catalog.sheets);
-    views.discover.replaceChildren(h('div', { class: 'discover' },
-      h('div', {}, h('h3', {}, 'Why'),
-        h('div', { class: 'hint', style: { marginBottom: '10px' } }, 'The docs name only two ui.StyleValue keys, but the game has more. This script runs in the dev client and prints every key plus the values the built-in stylesheets use. Importing the output gives you the full key list in the designer, the defaults you inherit, and ui.StyleValue autocomplete.'),
-        h('h3', {}, 'Steps'),
-        h('ol', {},
-          h('li', {}, 'Click ', h('b', {}, 'Create discovery plugin'), ' (or copy the script into a test plugin).'),
-          h('li', {}, 'Copy that folder into the beta client\'s ', h('code', {}, 'dev_plugins'), ' folder, run ', h('code', {}, 'prf'), ', then ', h('code', {}, 'pon style_discovery'), '.'),
-          h('li', {}, 'Copy the console output and paste it below.')),
-        h('div', { class: 'row', style: { margin: '10px 0' } },
-          h('button', { class: 'primary', onclick: () => vscode.postMessage({ type: 'makeDiscoveryPlugin' }) }, 'Create discovery plugin'),
-          h('button', { onclick: () => vscode.postMessage({ type: 'copy', text: S.discovery }) }, 'Copy script')),
-        h('pre', { class: 'code' }, S.discovery)),
-      h('div', {}, h('h3', {}, 'Import output'), pasteArea,
-        h('div', { class: 'row', style: { marginTop: '8px' } },
-          h('button', { class: 'primary', onclick: () => vscode.postMessage({ type: 'import', text: pasteArea.value }) }, 'Import'),
-          keys.length ? h('button', { onclick: () => vscode.postMessage({ type: 'clearCatalog' }) }, 'Clear imported keys') : null),
-        resultLine),
-      h('div', { class: 'catalog' }, h('h3', {}, `Known keys (${keys.length + S.docKeys.filter(k => !(k in S.catalog.keys)).length})`),
-        h('table', {}, h('tr', {}, h('th', {}, 'ui.StyleValue key'), h('th', {}, 'Property ID'), h('th', {}, 'Source')),
-          S.docKeys.filter(k => !(k in S.catalog.keys)).map(k => h('tr', {}, h('td', {}, k), h('td', {}, '?'), h('td', {}, 'docs'))),
-          keys.map(([k, v]) => h('tr', {}, h('td', {}, k), h('td', {}, String(v)), h('td', {}, S.docKeys.includes(k) ? 'docs + discovered' : 'discovered')))),
-        sheets.length ? h('div', { style: { marginTop: '14px' } }, h('h3', {}, 'Built-in stylesheet values'),
-          h('table', {}, h('tr', {}, h('th', {}, 'Stylesheet'), h('th', {}, 'Key'), h('th', {}, 'Value')),
-            sheets.flatMap(([s, vals]) => Object.entries(vals).map(([k, v]) => h('tr', {}, h('td', {}, s), h('td', {}, k), h('td', {}, String(v))))))) : null)));
-  }
-
   // ---------------------------------------------------------------- render + messages
   function render() {
     tabbar.querySelector('.title').textContent = 'Style Studio · ' + S.plugin;
     for (const [id, t] of Object.entries(tabs)) { t.setAttribute('aria-selected', String(S.tab === id)); views[id].classList.toggle('hidden', S.tab !== id); }
     if (S.tab === 'mine') renderMine();
     if (S.tab === 'gallery') renderGallery();
-    if (S.tab === 'discover') renderDiscover();
   }
   window.addEventListener('message', ev => {
     const m = ev.data;
     if (m.type === 'init') {
       S.spec = m.spec && Array.isArray(m.spec.styles) ? m.spec : { styles: [] };
-      S.catalog = m.catalog; S.builtins = m.builtins; S.docKeys = m.docKeys; S.discovery = m.discovery; S.plugin = m.plugin;
+      S.catalog = m.catalog; S.builtins = m.builtins; S.docKeys = m.docKeys; S.plugin = m.plugin;
       S.sel = 0; S.dirty = false;
       if (!S.spec.styles.length) S.tab = 'gallery';
       render(); regen();
@@ -314,10 +281,6 @@
       if (S.tab === 'mine') renderMine();
     } else if (m.type === 'catalog') {
       S.catalog = m.catalog; render();
-    } else if (m.type === 'importResult') {
-      resultLine.className = 'result ' + (m.ok ? 'ok' : 'bad');
-      resultLine.textContent = m.msg;
-      if (m.ok) pasteArea.value = '';
     }
   });
   vscode.postMessage({ type: 'ready' });

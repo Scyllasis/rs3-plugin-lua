@@ -3,20 +3,56 @@
   "title": "RuneScape 3 plugin manifest (plugin.json)",
   "description": "Manifest for an RS3 Plugin Hub Lua plugin. See https://developer.runescape.com/rs/structure.html",
   "type": "object",
-  "required": ["name", "version", "contactEmailAddress"],
+  "required": [
+    "name",
+    "version",
+    "contactEmailAddress"
+  ],
   "definitions": {
     "dependencies": {
       "oneOf": [
         {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 },
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "uniqueItems": true,
           "description": "Plugin names. Each dependency is imported under its plugin name."
         },
         {
           "type": "object",
-          "additionalProperties": { "type": "string", "minLength": 1 },
-          "description": "Map of variable name -> plugin name. Use this form to rename a dependency (required when a plugin name starts with '!')."
+          "properties": {
+            "prettyui": {
+              "type": "integer",
+              "const": 6398181,
+              "description": "PrettyUI (J3): native-looking windows, panels, buttons, fields and graphs, used as the global prettyui. The editor loads its definitions when this is listed. Docs: https://prettyui.j3.gg/"
+            }
+          },
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Plugin hub (mod.io) ID of the dependency."
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "description": "Plugin name."
+              }
+            ]
+          },
+          "description": "Map of variable name -> plugin hub ID (or plugin name). The dependency is available as a global with that variable name, e.g. \"prettyui\": 6398181.",
+          "defaultSnippets": [
+            {
+              "label": "PrettyUI",
+              "description": "Add PrettyUI as a dependency (global prettyui)",
+              "body": {
+                "prettyui": 6398181
+              }
+            }
+          ]
         }
       ]
     },
@@ -25,7 +61,11 @@
       "uniqueItems": true,
       "items": {
         "type": "string",
-        "enum": ["httpAccess", "chatAccess", "trackingAccess"],
+        "enum": [
+          "httpAccess",
+          "chatAccess",
+          "trackingAccess"
+        ],
         "enumDescriptions": [
           "Enables HTTP requests to the base URLs listed in \"urls\".",
           "Enables the Chat API and the ChatMessage event.",
@@ -84,7 +124,9 @@
     }
   },
   "patternProperties": {
-    "^remote": { "description": "Fields added for plugins retrieved from a remote repository." }
+    "^remote": {
+      "description": "Fields added for plugins retrieved from a remote repository."
+    }
   },
   "additionalProperties": {
     "description": "Not a documented plugin.json key."

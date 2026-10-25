@@ -1,11 +1,11 @@
 // RS3 Style Studio host: built-in style gallery, custom stylesheet designer (-> styles.lua),
-// and import of ui.StyleValue keys discovered in the dev client.
+// with a live preview.
 'use strict';
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
 
-const { BUILTINS, DOC_KEYS, GEN_HEADER, generateLua, DISCOVERY_LUA, parseDiscovery, generateAnnotations } = require('./lib');
+const { BUILTINS, DOC_KEYS, GEN_HEADER, generateLua } = require('./lib');
 
 const panels = new Map(); // root -> StudioPanel
 
@@ -45,7 +45,7 @@ class StudioPanel {
     const spec = this.readJson('.rs3/styles.json', { styles: [] });
     this.panel.webview.postMessage({
       type: 'init', spec, catalog: this.catalog(), builtins: BUILTINS, docKeys: DOC_KEYS,
-      discovery: DISCOVERY_LUA, plugin: path.basename(this.root),
+      plugin: path.basename(this.root),
       stylesLuaExists: fs.existsSync(this.f('styles.lua'))
     });
   }
@@ -55,36 +55,11 @@ class StudioPanel {
       case 'ready': this.send(); break;
       case 'generate': this.panel.webview.postMessage({ type: 'generated', code: generateLua(m.spec) }); break;
       case 'save': await this.save(m.spec); break;
-      case 'import': {
-        const r = parseDiscovery(m.text);
-        const n = Object.keys(r.keys).length, ns = Object.keys(r.sheets).length;
-        if (!n && !ns) {
-          this.panel.webview.postMessage({ type: 'importResult', ok: false, msg: r.errors.length ? 'The script ran but could not list keys: ' + r.errors.join('; ') : 'No SV| or SS| lines found in what you pasted.' });
-          return;
-        }
-        const cat = this.catalog();
-        Object.assign(cat.keys, r.keys);
-        for (const [s, vals] of Object.entries(r.sheets)) cat.sheets[s] = Object.assign(cat.sheets[s] || {}, vals);
-        cat.updated = new Date().toISOString();
-        this.writeJson('.rs3/stylevalues.json', cat);
-        fs.writeFileSync(this.f('.rs3', 'stylevalues.lua'), generateAnnotations(cat.keys));
-        this.panel.webview.postMessage({ type: 'catalog', catalog: cat });
-        this.panel.webview.postMessage({ type: 'importResult', ok: true,
-          msg: `Imported ${n} key${n === 1 ? '' : 's'} and values for ${ns} built-in stylesheet${ns === 1 ? '' : 's'}. ui.StyleValue autocomplete now includes them.` + (r.done != null && r.done !== n ? ` (The script reported ${r.done}; paste every line if some are missing.)` : '') });
-        break;
-      }
-      case 'clearCatalog': {
-        this.writeJson('.rs3/stylevalues.json', { keys: {}, sheets: {} });
-        try { fs.unlinkSync(this.f('.rs3', 'stylevalues.lua')); } catch { /* none */ }
-        this.panel.webview.postMessage({ type: 'catalog', catalog: { keys: {}, sheets: {} } });
-        break;
-      }
       case 'copy': await vscode.env.clipboard.writeText(m.text); vscode.window.setStatusBarMessage('Copied', 2000); break;
       case 'insert': {
         await require('../sprite/panel').insertIntoEditor(m.text);
         break;
       }
-      case 'makeDiscoveryPlugin': await this.makeDiscoveryPlugin(); break;
       case 'openFile': {
         const doc = await vscode.workspace.openTextDocument(this.f(m.file));
         await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Beside });
@@ -119,15 +94,6 @@ class StudioPanel {
         }
       }
     } catch { /* no main.lua */ }
-  }
-
-  async makeDiscoveryPlugin() {
-    const dir = path.join(path.dirname(this.root), 'style_discovery');
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, 'plugin.json'), JSON.stringify({ name: 'Style Discovery', version: '0.0.1', contactEmailAddress: 'you@example.com' }, null, 2) + '\n');
-    fs.writeFileSync(path.join(dir, 'main.lua'), DISCOVERY_LUA);
-    const c = await vscode.window.showInformationMessage(`Created ${dir}. Copy it into the beta client's dev_plugins folder, run prf and pon style_discovery (plugins are named by folder), then paste the console output here.`, 'Open main.lua');
-    if (c) await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(path.join(dir, 'main.lua')), { viewColumn: vscode.ViewColumn.Beside });
   }
 
   html() {
