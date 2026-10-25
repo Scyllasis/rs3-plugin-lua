@@ -7,6 +7,11 @@
 - API Explorer and **RS3: Search API…** include PrettyUI, linking each entry to its section of the PrettyUI docs.
 - plugin.json validation accepts plugin hub IDs as dependency values (`"prettyui": 6398181`, the documented form) and suggests PrettyUI.
 - **UI preview draws PrettyUI.** A **PrettyUI** switch in the toolbar runs PrettyUI from the copy the game client already downloaded and draws its components; off is the base view. It is on automatically when plugin.json depends on PrettyUI. Components point at the plugin line that created them, and errors inside PrettyUI are reported at the calling line. Built-in game sprites are drawn as themed approximations by name.
+- **UI preview: every window in its own Window menu entry.** A screen that shows several windows lists each one (by its title) under it; picking one shows only that window.
+- **UI preview: drag to move, with your code updated.** Dragging a component (or nudging it with the arrow keys, Shift for 10) rewrites the numbers in its `SetPos`/`SetX`/`SetY` call or its `x =`/`y =` options, as an undoable edit. Computed or auto-laid-out positions snap back with an explanation.
+- **UI preview: zoom and pan.** Ctrl+wheel zooms around the mouse, − / + buttons and keys step from 10% to 800%, 0 fits, 1 is 100%; middle-drag, Space+drag or dragging the empty area pans. Fit shows its actual percentage.
+- UI preview: text measuring (`config.Font.X:GetStringWidth` and friends) gives approximate widths, so buttons that size to their label are wide enough; `<br>` breaks lines; item slots show the item name; closed combo boxes show the selected entry; checkboxes show their ticked state; hidden parts no longer stretch the Window only crop; `x`/`y` read back relative to the parent.
+- Fix: removing PrettyUI from plugin.json now also removes its definitions when the extension runs from a folder not named after it.
 - UI preview: `id.*` values are integers (stand-ins mapped back to names), `config.Obj.X.id` is an integer, combo box entry maps are listed, and windows with more than 200 components are no longer cut off.
 
 ### Changed

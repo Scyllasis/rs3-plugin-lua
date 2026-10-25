@@ -22,6 +22,9 @@ Click the preview icon in the editor title bar (or run **RS3: Open UI Preview**)
 - **Window picker:** switch between the startup game window, the ribbon plugin window, the settings window, and any pop-up function you tag with `---@preview Title`.
 - **Click to inspect:** see each component's screen rect, layout formula and properties, and jump to the line that created it. Your editor cursor highlights the matching components.
 - **Interact:** double-click buttons to run their real hooks; fire your subscribed events.
+- **Drag to move:** drag a component (or nudge it with the arrow keys) and the numbers in your `SetPos` / `x =` / `y =` are updated for you. Ctrl+Z undoes it.
+- **Zoom and pan:** Ctrl+wheel, − / +, 0 to fit; middle-drag or Space+drag to pan.
+- **One window at a time:** every window your plugin draws gets its own entry in the Window menu.
 - **Resolutions and UI scale** to check anchoring; **Bounds** to see invisible containers.
 - **Warnings** for UI that would be invisible in-game (no size, no font, no stylesheet), also in the Problems panel.
 - Optional `rs3preview.lua` for preview-only test data. See **?** in the preview for details.

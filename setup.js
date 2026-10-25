@@ -27,6 +27,8 @@ const norm = p => {
   let s = path.normalize(String(p).replace(/^~(?=$|[\\/])/, require('os').homedir())).replace(/[\\/]+$/, '');
   return process.platform === 'win32' ? s.toLowerCase() : s;
 };
+/** One of our own definition folders: this copy's library/deps, or another version's (by folder name). */
+const ours = p => LIB_MARKER.test(String(p)) || norm(p).startsWith(norm(ctx.extensionPath) + path.sep);
 const asArray = v => Array.isArray(v) ? v : v && typeof v === 'object' ? Object.keys(v) : [];
 
 function findPluginRoot(file) {
@@ -167,7 +169,7 @@ async function setLibrary(folderOrUndefined, on) {
     : target === vscode.ConfigurationTarget.WorkspaceFolder ? ins.workspaceFolderValue : ins.workspaceValue;
   // A workspace value replaces the user value entirely, so start from the user's entries.
   const base = own !== undefined ? asArray(own) : target === vscode.ConfigurationTarget.Global ? [] : asArray(ins.globalValue);
-  const cleaned = base.filter(p => norm(p) !== norm(lib) && !LIB_MARKER.test(String(p)));
+  const cleaned = base.filter(p => norm(p) !== norm(lib) && !ours(p));
   const next = on ? [...cleaned, lib, ...depLibs(folderOrUndefined && folderOrUndefined.uri.fsPath)] : cleaned;
   const same = own !== undefined && next.length === asArray(own).length && next.every((p, i) => p === asArray(own)[i]);
   if (!same) await cfg.update('workspace.library', next, target);
@@ -185,7 +187,7 @@ async function patchLuarc(rc, folderPath) {
   }
   const data = rc.data || {};
   const want = norm(libPath());
-  const keep = asArray(rc.lib).filter(p => !LIB_MARKER.test(String(p)) && norm(path.resolve(folderPath, String(p))) !== want);
+  const keep = asArray(rc.lib).filter(p => !ours(path.resolve(folderPath, String(p))) && norm(path.resolve(folderPath, String(p))) !== want);
   const next = [...keep, libPath(), ...depLibs(folderPath)];
   if (rc.flat) data['workspace.library'] = next;
   else { data.workspace = data.workspace || {}; data.workspace.library = next; }

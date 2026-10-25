@@ -1,5 +1,7 @@
 ---@meta
 
+-- unverified: x/y "relative to the parent" is inferred from library plugins tested in-game (PrettyUI adds
+-- root.x + child.x to place overlays); the docs only say "resolved".
 --- Base type for all UI components (decorative, interactive and layout).
 ---
 --- [Docs](https://developer.runescape.com/rs/ui/component.html)
@@ -7,8 +9,8 @@
 ---@field position ui.Pos Gets or sets the position.
 ---@field size ui.Size Gets or sets the size.
 ---@field isSafeAreaRelative boolean Position relative to the screen's safe area.
----@field x integer Resolved X position. Read-only.
----@field y integer Resolved Y position. Read-only.
+---@field x integer Resolved X position, relative to the parent. Read-only.
+---@field y integer Resolved Y position, relative to the parent. Read-only.
 ---@field width integer Resolved width. Read-only.
 ---@field height integer Resolved height. Read-only.
 ---@field xyLocal Vector2 Position relative to the parent. Read-only.

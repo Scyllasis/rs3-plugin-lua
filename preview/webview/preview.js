@@ -28,11 +28,26 @@
 
   // ---------------------------------------------------------------- layout
   const app = document.getElementById('app');
-  const sceneSel = h('select', { class: 'scene', title: 'Which window to show', onchange: e => setState({ sceneId: e.target.value }) });
+  // options are a scene id, or WIN_SEP + scene id + WIN_SEP + window key for one of a scene's windows
+  const WIN_SEP = '\u0001';
+  const sceneSel = h('select', { class: 'scene', title: 'Which window to show', onchange: e => {
+    const [, scene, key] = e.target.value.split(WIN_SEP);
+    if (key) setState({ sceneId: scene, windowKey: key });
+    else setState({ sceneId: e.target.value, windowKey: null });
+  } });
   const resSel = h('select', { title: 'Client resolution', onchange: e => setState({ resolution: e.target.value }) });
   const scaleSel = h('select', { title: 'Interface scaling', onchange: e => setState({ uiScale: Number(e.target.value) }) });
-  const zoomSel = h('select', { title: 'Zoom', onchange: e => { S.zoom = e.target.value; persist(); layoutStage(); } },
-    opt('fit', 'Fit'), opt('0.25', '25%'), opt('0.5', '50%'), opt('0.75', '75%'), opt('1', '100%'), opt('1.5', '150%'));
+  const ZOOMS = [0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 6, 8];
+  const zoomSel = h('select', { title: 'Zoom (Ctrl+wheel over the preview, or + / - / 0 for fit / 1 for 100%)', onchange: e => { setZoom(e.target.value); } });
+  const btnZoomOut = h('button', { class: 'icon-btn', title: 'Zoom out (-)', onclick: () => stepZoom(-1) }, '\u2212');
+  const btnZoomIn = h('button', { class: 'icon-btn', title: 'Zoom in (+)', onclick: () => stepZoom(1) }, '+');
+  function syncZoomSel() {
+    const cur = S.zoom === 'fit' || !S.zoom ? 'fit' : String(Number(S.zoom));
+    const presets = ZOOMS.map(String);
+    const custom = cur !== 'fit' && !presets.includes(cur) ? [opt(cur, Math.round(Number(cur) * 100) + '%', true)] : [];
+    zoomSel.replaceChildren(opt('fit', 'Fit', cur === 'fit'), ...custom, ...ZOOMS.map(z => opt(String(z), Math.round(z * 100) + '%', String(z) === cur)));
+  }
+  syncZoomSel();
   const evSel = h('select', { title: 'Fire an event your plugin subscribes to', onchange: e => {
     if (e.target.value) vscode.postMessage({ type: 'fireEvent', name: e.target.value });
     e.target.value = '';
@@ -52,7 +67,7 @@
     h('label', {}, 'Window', sceneSel),
     viewSwitch,
     h('div', { class: 'sep' }),
-    h('div', { class: 'group' }, resSel, scaleSel, zoomSel),
+    h('div', { class: 'group' }, resSel, scaleSel, btnZoomOut, zoomSel, btnZoomIn),
     h('div', { class: 'sep' }),
     h('div', { class: 'group' }, btnClient, btnBounds, btnInteract, btnSync),
     h('div', { class: 'sep' }),
@@ -69,14 +84,15 @@
   const screen = h('div', { class: 'screen' });
   const stageOuter = h('div', { class: 'stage-outer' }, screen);
   const stageHint = h('div', { class: 'stage-hint' });
-  const stageWrap = h('div', { class: 'stage-wrap' }, stageOuter, stageHint);
+  const stageWrap = h('div', { class: 'stage-wrap' }, stageOuter);
+  const stageBox = h('div', { class: 'stage-box' }, stageWrap, stageHint);
   const treeBox = h('div', { class: 'scroll' });
   const treeCount = h('span', { class: 'count' });
   const propsBox = h('div', { class: 'scroll props' });
   const side = h('div', { class: 'side' },
     h('section', {}, h('h3', {}, 'Components', treeCount), treeBox),
     h('section', {}, h('h3', {}, 'Properties'), propsBox));
-  const main = h('div', { class: 'main' }, stageWrap, side);
+  const main = h('div', { class: 'main' }, stageBox, side);
   const outBadges = h('span', { class: 'badge' });
   const outList = h('div', { class: 'scroll' });
   const output = h('div', { class: 'output' + (S.logsOpen ? '' : ' collapsed') },
@@ -89,14 +105,14 @@
     Object.assign(S.state, patch);
     vscode.postMessage({ type: 'setState', state: patch });
     syncToolbar();
-    if ('showClient' in patch || 'showBounds' in patch || 'interact' in patch || 'viewMode' in patch) { drawScreen(); if ('viewMode' in patch) drawTree(); }
+    if ('showClient' in patch || 'showBounds' in patch || 'interact' in patch || 'viewMode' in patch || 'windowKey' in patch) { drawScreen(); if ('viewMode' in patch || 'windowKey' in patch) drawTree(); }
   }
 
   function syncHint() {
     const mode = S.state.interact
       ? 'Interact mode: click buttons and checkboxes to run their hooks'
-      : 'Click to select · double-click to press · Alt+click for the parent';
-    stageHint.textContent = mode + ' · V switches view · ' + Math.round((S.z || 1) * 100) + '%';
+      : 'Click to select · drag to move (updates your code) · arrows nudge · double-click to press · Alt+click for the parent';
+    stageHint.textContent = S.moveMsg || (mode + ' · Ctrl+wheel zooms · middle-drag or Space+drag pans · V switches view · ' + Math.round((S.z || 1) * 100) + '%');
   }
   function syncToolbar() {
     const isolated = S.state.viewMode === 'window';
@@ -149,7 +165,8 @@
     el.style.alignItems = pick(vt, 'TOP', 'BOTTOM');
     el.style.textAlign = el.style.justifyContent === 'center' ? 'center' : el.style.justifyContent === 'flex-end' ? 'right' : 'left';
   }
-  const textOf = v => (typeof v === 'string' || typeof v === 'number') ? String(v) : '';
+  // <br> is the game's line break in text
+  const textOf = v => (typeof v === 'string' || typeof v === 'number') ? String(v).replace(/<br\s*\/?>/gi, '\n') : '';
 
   // ---------------------------------------------------------------- stylesheets & sprites
   // Follow a stylesheetID through custom sheets (ui.StyleSheets[id].parent = …) to the built-in it inherits from.
@@ -277,7 +294,7 @@
       [/SCROLLBAR_DRAGGER_V2_[012]$/, 'gs-thumb'], [/SCROLLBAR/, 'gs-track'],
       [/SLIDER_BAR_BACKING/, 'gs-track'], [/SLIDER_BAR/, 'gs-thumb'],
       [/TAB_CURRENT/, 'gs-tab-on'], [/TAB_/, 'gs-tab'],
-      [/SLOT/, 'gs-slot'], [/CHECKBOX|RADIO/, 'gs-check'],
+      [/SLOT/, 'gs-slot'], [/CHECKBOX_SMALL_[245]$|RADIO.*(ON|SELECTED)/, 'gs-check-on'], [/CHECKBOX|RADIO/, 'gs-check'],
       [/CONTENT_TILE|BACKGROUND|_BG/, 'gs-fill'],
       [/WINDOW|FRAME|BORDER|CORNER|SIDE|EDGE|DIVIDER|LINE/, 'gs-frame'],
       [/ICON|BTN_|ARROW|INCREASE|DECREASE|ACCORDION/, 'gs-icon'],
@@ -388,7 +405,16 @@
         el.append(v ? h('span', {}, v) : h('span', { class: 'empty' }, textOf(p.emptyText) || 'input'));
         return el;
       }
-      case 'List': case 'ComboField': {
+      case 'ComboField': {
+        // closed combo box: the selected (or first) entry and an arrow
+        el.classList.add('listbox', 'combo');
+        const names = Array.isArray(p.entries) ? p.entries.map(e => typeof e === 'object' && e ? (e.text || e.name || e.label || '') : String(e))
+          : p.entries && typeof p.entries === 'object' ? Object.keys(p.entries) : [];
+        const byValue = p.entries && !Array.isArray(p.entries) && typeof p.entries === 'object' ? Object.keys(p.entries).find(k => p.entries[k] === p.value) : null;
+        el.append(h('span', { class: 'combo-text' }, textOf(byValue || names[0] || '') || '(no entries)'), h('span', { class: 'combo-arrow' }, '\u25be'));
+        return el;
+      }
+      case 'List': {
         el.classList.add('listbox');
         // a list, or a name -> ID map (SetEntries({ A = 1 }))
         const entries = Array.isArray(p.entries) ? p.entries : p.entries && typeof p.entries === 'object' ? Object.keys(p.entries) : [];
@@ -401,6 +427,22 @@
       }
       case 'Sprite': case 'Model': case 'ModelGroup': case 'Canvas': case 'RadialProgressOverlay': {
         if (c.type === 'Sprite') { const art = spriteEl(p, true); if (art) { el.append(art); return el; } }
+        if (c.type === 'Sprite' && p.associatedObjectID != null && p.associatedObjectID !== '') {
+          // an item (ItemSlot): no game art in the preview, so show its name
+          const raw = String(p.associatedObjectID).replace(/^config\.Obj\./, '').replace(/\.id$/, '');
+          const name = /^\d+$/.test(raw) ? 'item ' + raw : raw.toLowerCase().replace(/_/g, ' ').replace(/^./, ch => ch.toUpperCase());
+          el.classList.add('gs', 'gs-item');
+          el.title = 'Item: ' + name + ' (drawn as its name; no game art in the preview)';
+          el.append(h('span', { class: 'item-name' }, name));
+          const q = Number(p.associatedObjectQuantity);
+          if (q > 1) el.append(h('span', { class: 'item-qty' }, String(q)));
+          return el;
+        }
+        if (c.type === 'Sprite' && p.spriteID == null && p.sprite == null && p.associatedObjectID == null) {
+          // nothing to draw yet (an empty slot, an overlay waiting for art): outline only, no label
+          el.classList.add('spr-empty');
+          return el;
+        }
         if (c.type === 'Sprite' && typeof p.spriteID === 'string' && /^id\.Sprite\./.test(p.spriteID)) {
           el.classList.add('gs', gameSpriteClass(p.spriteID));
           el.title = p.spriteID.replace(/^id\.Sprite\./, '') + ' (game sprite, drawn approximately)';
@@ -430,9 +472,8 @@
     return out;
   }
 
-  // Components that belong to the window chosen in the Window menu (for the "Window only" view).
-  function focusSet() {
-    const scene = S.state.sceneId;
+  // Components that belong to a scene in the Window menu, with its top-level components.
+  function sceneSet(scene) {
     const ids = new Set();
     for (const c of S.data.comps) {
       if (c.root && c.kind === 'game') continue;
@@ -447,12 +488,76 @@
     const tops = [...ids].filter(id => !ids.has(S.byId.get(id).parent));
     return { ids, tops };
   }
+  function subtree(id) {
+    const ids = new Set([id]);
+    const walk = c => { for (const k of c.children) { const kc = S.byId.get(k); if (kc) { ids.add(k); walk(kc); } } };
+    walk(S.byId.get(id));
+    return ids;
+  }
+  /** A scene's separate windows (its top-level components with a size), each with a stable key and a label. */
+  function sceneWindows(scene) {
+    const { tops } = sceneSet(scene);
+    const sized = tops.map(id => S.byId.get(id)).filter(c => c && c.w > 0 && c.h > 0);
+    // a window has some size and a title or text; small unlabelled pieces (a library's scrollbar or
+    // overlay layers) join the window created by the same line of code
+    const isWindow = c => c.w >= 60 && c.h >= 40 && !!windowText(c);
+    const wins = sized.filter(isWindow);
+    if (wins.length < 2) return [];
+    const extras = new Map(wins.map(w => [w.id, []]));
+    for (const c of sized) {
+      if (isWindow(c)) continue;
+      const owner = wins.filter(w => w.file === c.file && w.line === c.line)
+        .sort((a, b) => Math.abs(a.id - c.id) - Math.abs(b.id - c.id))[0];
+      if (owner) extras.get(owner.id).push(c.id);
+    }
+    const seen = new Map();
+    return wins.map(c => {
+      const label = windowLabel(c);
+      const base = (c.file || '') + ':' + (c.line || '') + '#' + label;
+      const n = (seen.get(base) || 0) + 1;
+      seen.set(base, n);
+      return { id: c.id, extra: extras.get(c.id), key: base + (n > 1 ? '#' + n : ''), label };
+    });
+  }
+  function windowText(c) {
+    const p = c.props || {};
+    const own = textOf(p.headerText && p.headerText.content) || textOf(p.label) || textOf(p.content);
+    if (own) return own;
+    for (const id of [...subtree(c.id)].sort((a, b) => a - b)) {
+      const k = S.byId.get(id);
+      const t = textOf(k.props.headerText && k.props.headerText.content) || (k.type === 'Text' ? textOf(k.props.content) : '');
+      if (t) return t;
+    }
+    return '';
+  }
+  /** The window's title: a header, or the first text inside it (in creation order). */
+  function windowLabel(c) {
+    return windowText(c) || `${c.type} ${fmt(c.w)}×${fmt(c.h)}`;
+  }
+
+  // Components that belong to the window chosen in the Window menu: a whole scene, or one of its windows.
+  function focusSet() {
+    const f = sceneSet(S.state.sceneId);
+    f.all = f.ids;
+    if (S.state.windowKey) {
+      const w = sceneWindows(S.state.sceneId).find(x => x.key === S.state.windowKey);
+      if (w) {
+        f.ids = subtree(w.id);
+        for (const x of w.extra || []) for (const id of subtree(x)) f.ids.add(id);
+        f.tops = [w.id, ...(w.extra || [])];
+        f.window = w;
+      }
+    }
+    return f;
+  }
 
   function focusBounds(f) {
     let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    const hiddenUnder = c => { for (let k = c; k; k = S.byId.get(k.parent)) if (k.props && k.props.hidden === true) return true; return false; };
     for (const id of f.ids) {
       const c = S.byId.get(id);
       if (c.w <= 0 && c.h <= 0) continue;
+      if (hiddenUnder(c)) continue; // hidden parts (e.g. an unused scrollbar) don't stretch the view
       const top = c.root ? c.y - 28 : c.y; // window title bar
       x1 = Math.min(x1, c.x); y1 = Math.min(y1, top);
       x2 = Math.max(x2, c.x + Math.max(c.w, 0)); y2 = Math.max(y2, c.y + Math.max(c.h, 0));
@@ -489,6 +594,11 @@
     } else {
       S.focus = null;
       if (S.state.showClient) world.append(chrome(W, H));
+      // one window picked: hide the scene's other windows, keep everything else
+      if (S.state.windowKey) {
+        const f = focusSet();
+        if (f.window) order = order.filter(c => !f.all.has(c.id) || f.ids.has(c.id));
+      }
     }
     Object.assign(screen.style, { width: S.view.w + 'px', height: S.view.h + 'px' });
     Object.assign(world.style, { width: W + 'px', height: H + 'px', transform: `translate(${-S.view.x}px, ${-S.view.y}px)` });
@@ -498,6 +608,10 @@
     layoutStage();
   }
 
+  function fitZoom() {
+    const v = S.view || { w: S.cfg.screenW, h: S.cfg.screenH };
+    return Math.max(0.1, Math.min((stageWrap.clientWidth - 24) / v.w, (stageWrap.clientHeight - 24) / v.h, 2));
+  }
   function layoutStage() {
     if (!S.data) return;
     const v = S.view || { w: S.cfg.screenW, h: S.cfg.screenH };
@@ -510,6 +624,10 @@
     }
     S.z = z;
     syncHint();
+    // show the real zoom in the menu: Fit (63%)
+    const fitOpt = zoomSel.querySelector('option[value="fit"]');
+    if (fitOpt) fitOpt.textContent = 'Fit (' + Math.round((!(Number(S.zoom) > 0) ? z : fitZoom()) * 100) + '%)';
+    zoomSel.dataset.zoom = String(Math.round(z * 100));
     screen.style.transform = `scale(${z})`;
     Object.assign(stageOuter.style, { width: W * z + 'px', height: H * z + 'px' });
   }
@@ -656,7 +774,16 @@
   }
 
   function drawToolbar() {
-    sceneSel.replaceChildren(...S.scenes.map(s => opt(s.id, s.label, s.id === S.state.sceneId)));
+    // each scene, then its separate windows (known for the startup scene and the scene being shown)
+    const picked = S.state.windowKey && sceneWindows(S.state.sceneId).some(w => w.key === S.state.windowKey) ? S.state.windowKey : null;
+    sceneSel.replaceChildren(...S.scenes.flatMap(s => {
+      const wins = s.id === 'game' || s.id === S.state.sceneId ? sceneWindows(s.id) : [];
+      return [
+        opt(s.id, s.label + (wins.length ? ` (all ${wins.length} windows)` : ''), s.id === S.state.sceneId && !picked),
+        ...wins.map(w => opt(WIN_SEP + s.id + WIN_SEP + w.key, '\u00a0\u00a0\u21b3 ' + (w.label.length > 40 ? w.label.slice(0, 39) + '\u2026' : w.label),
+          s.id === S.state.sceneId && picked === w.key))
+      ];
+    }));
     resSel.replaceChildren(...S.resolutions.map(r => opt(r, r.replace('x', ' × '), r === S.state.resolution)));
     scaleSel.replaceChildren(...[0.75, 1, 1.25, 1.5, 2].map(v => opt(String(v), `UI ${Math.round(v * 100)}%`, Number(S.state.uiScale) === v)));
     const layer = new Set(['ContentLayerReady', 'SettingsLayerReady']);
@@ -714,6 +841,7 @@
   }
 
   screen.addEventListener('click', e => {
+    if (S.justDragged) { S.justDragged = false; return; }
     const c = compAt(e);
     if (!c) { S.sel = null; persist(); markClasses(); drawProps(); return; }
     if (S.state.interact) {
@@ -747,8 +875,123 @@
       setView(S.state.viewMode === 'window' ? 'game' : 'window');
     }
     if (e.key === 'Escape') { S.sel = null; persist(); markClasses(); drawProps(); }
-    if (e.key === 'ArrowUp' && S.sel) { const c = S.byId.get(S.sel); if (c && c.parent && !S.byId.get(c.parent).root) select(c.parent); }
+    if (e.target instanceof HTMLSelectElement || e.target instanceof HTMLInputElement) return;
+    if (e.key === 'ArrowUp' && e.altKey && S.sel) { const c = S.byId.get(S.sel); if (c && c.parent && !S.byId.get(c.parent).root) select(c.parent); return; }
+    const NUDGE = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    if (NUDGE[e.key] && S.sel && !S.state.interact) {
+      e.preventDefault();
+      const t = moveTarget(S.byId.get(S.sel));
+      const k = e.shiftKey ? 10 : 1;
+      if (t) requestMove(t, NUDGE[e.key][0] * k, NUDGE[e.key][1] * k);
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === '+' || e.key === '=') stepZoom(1);
+    else if (e.key === '-' || e.key === '_') stepZoom(-1);
+    else if (e.key === '0') setZoom('fit');
+    else if (e.key === '1') setZoom('1');
   });
+
+  // ---------------------------------------------------------------- zoom & pan
+  function setZoom(z, cx, cy) {
+    const before = stageOuter.getBoundingClientRect();
+    const oldZ = S.z || 1;
+    if (z !== 'fit') z = String(Math.max(0.1, Math.min(8, Number(z) || 1)));
+    S.zoom = z;
+    persist();
+    syncZoomSel();
+    layoutStage();
+    // keep the point under the cursor (or the view centre) where it was
+    const wr = stageWrap.getBoundingClientRect();
+    if (cx == null) { cx = wr.left + wr.width / 2; cy = wr.top + wr.height / 2; }
+    const px = (cx - before.left) / oldZ, py = (cy - before.top) / oldZ;
+    const after = stageOuter.getBoundingClientRect();
+    stageWrap.scrollLeft += after.left - (cx - px * S.z);
+    stageWrap.scrollTop += after.top - (cy - py * S.z);
+  }
+  function stepZoom(dir, cx, cy) {
+    const cur = S.z || 1;
+    const next = dir > 0 ? ZOOMS.find(z => z > cur + 1e-6) : [...ZOOMS].reverse().find(z => z < cur - 1e-6);
+    if (next) setZoom(next, cx, cy);
+  }
+  stageWrap.addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return; // plain wheel scrolls
+    e.preventDefault();
+    setZoom((S.z || 1) * Math.pow(1.0015, -e.deltaY), e.clientX, e.clientY);
+  }, { passive: false });
+  let spaceDown = false;
+  window.addEventListener('keydown', e => { if (e.code === 'Space' && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) { spaceDown = true; stageWrap.classList.add('pan-ready'); e.preventDefault(); } });
+  window.addEventListener('keyup', e => { if (e.code === 'Space') { spaceDown = false; stageWrap.classList.remove('pan-ready'); } });
+
+  // ---------------------------------------------------------------- drag to move
+  /** What a drag moves: the outermost component whose position comes from the same line of your code. */
+  function moveTarget(c) {
+    let t = c;
+    while (t && !t.root && !t.posAt) t = S.byId.get(t.parent);
+    if (!t || t.root) return c && !c.root ? c : null;
+    const key = k => k.posAt && k.posAt.file + ':' + k.posAt.line;
+    for (let p = S.byId.get(t.parent); p && !p.root && key(p) === key(t); p = S.byId.get(p.parent)) t = p;
+    return t;
+  }
+  function requestMove(t, dx, dy) {
+    S.moveMsg = 'Moving ' + (t.type || 'component') + '…';
+    syncHint();
+    vscode.postMessage({ type: 'moveComp', id: t.id, dx, dy });
+  }
+  let drag = null;
+  stageWrap.addEventListener('pointerdown', e => {
+    const pan = e.button === 1 || (e.button === 0 && (spaceDown || !e.target.closest('.screen')));
+    if (pan) {
+      drag = { pan: true, x: e.clientX, y: e.clientY, sl: stageWrap.scrollLeft, st: stageWrap.scrollTop };
+      stageWrap.setPointerCapture(e.pointerId);
+      stageWrap.classList.add('panning');
+      e.preventDefault();
+      return;
+    }
+    if (e.button !== 0 || S.state.interact) return;
+    const c = compAt(e);
+    if (!c || c.root) return;
+    drag = { pan: false, x: e.clientX, y: e.clientY, c, moving: false };
+  });
+  stageWrap.addEventListener('pointermove', e => {
+    if (!drag) return;
+    if (drag.pan) {
+      stageWrap.scrollLeft = drag.sl - (e.clientX - drag.x);
+      stageWrap.scrollTop = drag.st - (e.clientY - drag.y);
+      return;
+    }
+    let dx = (e.clientX - drag.x) / (S.z || 1), dy = (e.clientY - drag.y) / (S.z || 1);
+    if (!drag.moving) {
+      if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) < 4) return;
+      drag.moving = true;
+      drag.t = moveTarget(drag.c);
+      if (!drag.t) { drag = null; return; }
+      const ids = new Set([drag.t.id]);
+      const walk = k => { for (const id of k.children) { const kc = S.byId.get(id); if (kc) { ids.add(id); walk(kc); } } };
+      walk(drag.t);
+      drag.els = [...world.querySelectorAll('.c')].filter(el => ids.has(Number(el.dataset.id)));
+      stageWrap.setPointerCapture(e.pointerId);
+      select(drag.t.id);
+    }
+    if (e.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; } // Shift: one axis
+    drag.dx = Math.round(dx); drag.dy = Math.round(dy);
+    for (const el of drag.els) el.style.transform = `translate(${drag.dx}px, ${drag.dy}px)`;
+    S.moveMsg = `Move ${drag.t.type} by ${drag.dx}, ${drag.dy} (Shift: one axis) · release to update the code`;
+    syncHint();
+  });
+  const endDrag = e => {
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+    stageWrap.classList.remove('panning');
+    if (d.pan || !d.moving) return;
+    S.justDragged = true;
+    setTimeout(() => { S.justDragged = false; }, 0);
+    if (!d.dx && !d.dy) { for (const el of d.els) el.style.transform = ''; S.moveMsg = null; syncHint(); return; }
+    requestMove(d.t, d.dx, d.dy);
+  };
+  stageWrap.addEventListener('pointerup', endDrag);
+  stageWrap.addEventListener('pointercancel', endDrag);
 
   // ---------------------------------------------------------------- messages
   window.addEventListener('message', ev => {
@@ -760,6 +1003,12 @@
       S.byId = new Map(m.data.comps.map(c => [c.id, c]));
       if (S.sel && !S.byId.has(S.sel)) S.sel = null;
       drawToolbar(); drawScreen(); drawTree(); drawProps(); drawOutput(); markClasses();
+    } else if (m.type === 'moveResult') {
+      S.moveMsg = (m.ok ? '\u2713 ' : '\u2715 ') + m.msg;
+      if (!m.ok) drawScreen(); // snap back
+      syncHint();
+      clearTimeout(S.moveTimer);
+      S.moveTimer = setTimeout(() => { S.moveMsg = null; syncHint(); }, m.ok ? 3000 : 7000);
     } else if (m.type === 'cursor') {
       S.cursor = { file: m.file, line: m.line };
       markClasses();

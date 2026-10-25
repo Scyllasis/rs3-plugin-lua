@@ -15,6 +15,8 @@ The **Window** menu lists every screen your plugin can show:
 | Plugin settings | you subscribe to `Event.SettingsLayerReady` | your handler, with an empty window as `e.component` |
 | Pop-up: *your title* | you tag a function with `---@preview` | that function |
 
+When one of these shows more than one window (say, several `GroupBox`es on the game layer), each window gets its own entry under it, named after its title: **↳ My window**. Pick one to see only that window, in both views. Pick the screen itself to see them all again.
+
 ### Adding your own pop-ups
 
 Put `---@preview Title` on the line above any function that builds UI:
@@ -44,6 +46,10 @@ Selection, editor sync, Interact and Bounds work the same in both views.
 - **Move your cursor** in the editor: components created on that line get a purple outline.
 - **Double-click** a button (or click with **Interact** on) to run its hook for real, e.g. `ONBUTTONPRESSED`. If the hook changes text or opens a pop-up, the preview updates. Use **Re-run** to reset.
 - **Fire event…** runs your handler for any event you subscribe to (e.g. `SkillTransmit`). Payload fields are placeholder values.
+- **Drag** a component to move it. When you let go, the numbers that position it are rewritten in your code: `SetPos(x, y, …)`, `SetX`/`SetY`, or `x =` / `y =` in an options table (for example `prettyui.Window.new(parent, { x = 80, y = 80 })`). A whole window moves together. **Shift** keeps the drag on one axis. The change is a normal edit, so **Ctrl+Z** in the editor undoes it. If the position is computed (variables or maths) or laid out automatically (PrettyUI's flow layout), the component snaps back and the hint says why.
+- **Arrow keys** nudge the selected component by 1 unit (**Shift**: 10), the same way. **Alt+↑** selects the parent.
+- **Zoom**: **Ctrl+wheel** zooms around the mouse, **+** / **−** step through 10% to 800%, **0** fits the view, **1** is 100%. The zoom menu shows the actual size when on Fit.
+- **Pan**: drag with the middle mouse button, hold **Space** and drag, or drag the empty area around the screen. The plain wheel scrolls.
 - **Bounds** outlines every component, including invisible layout containers. A red dot marks components with no size.
 - **Resolution** and **UI scale** change the screen size in interface units (pixels ÷ scale), so you can check anchoring on small and ultrawide screens.
 

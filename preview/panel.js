@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { Session, findPreviews } = require('./engine');
 const Libraries = require('./libraries');
+const { planMove } = require('./move');
 
 const RESOLUTIONS = ['1280x720', '1366x768', '1600x900', '1920x1080', '2560x1440', '3440x1440', '3840x2160'];
 
@@ -208,6 +209,7 @@ class PreviewPanel {
 
   async send(previews, cfg) {
     const data = await this.session.dump();
+    this.lastData = data;
     const lib = this.libraryInfo();
     if (lib.uses && !lib.available) data.logs.unshift({ kind: 'warn', msg: lib.error + ' Until then PrettyUI components are not drawn.' });
     else if (lib.uses && !lib.active) data.logs.unshift({ kind: 'info', msg: 'PrettyUI is switched off: its components are not drawn (base view). Turn the PrettyUI switch on to draw them.' });
@@ -307,6 +309,7 @@ class PreviewPanel {
         this.queue = this.queue.then(async () => { if (this.session) { await this.session.fireEvent(m.name); await this.send(); } });
         break;
       case 'reveal': await this.reveal(m.file, m.line, m.focus); break;
+      case 'moveComp': await this.moveComp(Number(m.id), Number(m.dx) || 0, Number(m.dy) || 0); break;
       case 'command': {
         const here = vscode.Uri.file(path.join(this.root, 'main.lua'));
         if (m.id === 'rs3lua.styleStudio') vscode.commands.executeCommand('rs3lua.styleStudio', here);
@@ -321,6 +324,27 @@ class PreviewPanel {
       case 'openSettings': vscode.commands.executeCommand('workbench.action.openSettings', 'rs3lua.preview'); break;
       case 'help': vscode.commands.executeCommand('markdown.showPreview', vscode.Uri.file(path.join(this.context.extensionPath, 'reference', 'ui-preview.md'))); break;
     }
+  }
+
+  /** Drag-to-move: rewrite the numbers that position component `id`, moved by (dx, dy) interface units. */
+  async moveComp(id, dx, dy) {
+    const reply = (ok, msg) => this.post({ type: 'moveResult', ok, msg });
+    const c = this.lastData && this.lastData.comps.find(k => k.id === id);
+    const at = c && c.posAt;
+    if (!at || !at.file || !at.line || at.file.startsWith('__lib/')) {
+      reply(false, c && c.posSet ? 'Its position is set somewhere the preview cannot edit.' : 'Its position is never set in your code (SetPos, or x/y options), so there is nothing to change.');
+      return;
+    }
+    const uri = vscode.Uri.file(path.join(this.root, at.file));
+    let doc;
+    try { doc = await vscode.workspace.openTextDocument(uri); } catch { reply(false, `Couldn't open ${at.file}.`); return; }
+    const plan = planMove(doc.getText(), at.line, Math.round(dx), Math.round(dy));
+    if (!plan.ok) { reply(false, plan.msg); return; }
+    const edit = new vscode.WorkspaceEdit();
+    for (const e of plan.edits) edit.replace(uri, new vscode.Range(e.line, e.start, e.line, e.end), e.text);
+    const ok = await vscode.workspace.applyEdit(edit);
+    reply(ok, ok ? `Moved: ${at.file}:${at.line} updated (Ctrl+Z in the editor to undo).` : 'The edit was refused.');
+    if (ok) this.rebuild();
   }
 
   async reveal(file, line, focus) {

@@ -376,12 +376,15 @@ resolve = function(rec)
 end
 __rs3_resolve = resolve
 
-M.SetX = function(self, x, pp, sp) local r = recOf(self); r.pos.x, r.pos.px, r.pos.sx = x or 0, pp or 0, sp or 0; r.posSet = true end
-M.SetY = function(self, y, pp, sp) local r = recOf(self); r.pos.y, r.pos.py, r.pos.sy = y or 0, pp or 0, sp or 0; r.posSet = true end
+-- posAt: the plugin line that last set the position (drag-to-move in the preview edits it)
+local function markPos(r, how) local file, line = userFrame(4); r.posAt = { file = file, line = line, how = how } end
+M.SetX = function(self, x, pp, sp) local r = recOf(self); r.pos.x, r.pos.px, r.pos.sx = x or 0, pp or 0, sp or 0; r.posSet = true; markPos(r, "SetX") end
+M.SetY = function(self, y, pp, sp) local r = recOf(self); r.pos.y, r.pos.py, r.pos.sy = y or 0, pp or 0, sp or 0; r.posSet = true; markPos(r, "SetY") end
 M.SetPos = function(self, x, y, ppx, ppy, spx, spy)
   local r = recOf(self)
   r.pos = { x = x or 0, y = y or 0, px = ppx or 0, py = ppy or 0, sx = spx or 0, sy = spy or 0 }
   r.posSet = true
+  markPos(r, "SetPos")
 end
 M.SetWidth = function(self, w, pp) local r = recOf(self); r.size.w, r.size.pw = w or 0, pp or 0; r.sizeSet = true end
 M.SetHeight = function(self, h, pp) local r = recOf(self); r.size.h, r.size.ph = h or 0, pp or 0; r.sizeSet = true end
@@ -431,6 +434,12 @@ compMT.__index = function(self, k)
   if M[k] then return M[k] end
   if READONLY[k] and not (k == "width" and rec.type == "Line" and rec.props.width ~= nil) then
     local x, y, w, h = resolve(rec)
+    -- x/y read back relative to the parent, as in the client (libraries add them up: root.x + child.x)
+    local parent = not rec.root and S.comps[rec.parent]
+    if parent then
+      local px, py = resolve(parent)
+      x, y = x - px, y - py
+    end
     return ({ x, y, w, h })[READONLY[k]]
   end
   if k == "parent" then local p = S.comps[rec.parent]; return p and p.obj end
@@ -459,6 +468,7 @@ compMT.__newindex = function(self, k, v)
   if k == "position" and type(v) == "table" then
     rec.pos = { x = v.x or 0, y = v.y or 0, px = v.px or 0, py = v.py or 0, sx = v.sx or 0, sy = v.sy or 0 }
     rec.posSet = true
+    markPos(rec, "position")
     return
   end
   if k == "size" and type(v) == "table" then
@@ -596,6 +606,59 @@ end })
 -- remaining API globals become stubs (Player, Inventory, var, config, …)
 for _, name in ipairs(__rs3_globals) do
   if rawget(_G, name) == nil then _G[name] = stub(name) end
+end
+
+-- config.Font.<NAME>: approximate text metrics from the size in the font name, so code (and libraries)
+-- that measure text get sensible widths instead of 0
+do
+  local function fontSize(name)
+    local n = tonumber(name:match("(%d+)PT") or name:match("_(%d+)$") or name:match("(%d+)")) or 13
+    return math.max(8, math.min(n, 40))
+  end
+  local function makeFont(name)
+    local size = fontSize(name)
+    local wide = (name:find("BOLD") or name:find("CINZEL")) and 0.62 or 0.54
+    local function lineWidth(s) return math.ceil(#s * size * wide) end
+    local function clean(text, ignoreTags)
+      text = tostring(text or "")
+      if not ignoreTags then text = text:gsub("<br>", "\n"):gsub("<[^>]+>", "") end
+      return text
+    end
+    local function wrapLines(text, wrapWidth, ignoreTags)
+      local count = 0
+      for para in (clean(text, ignoreTags) .. "\n"):gmatch("(.-)\n") do
+        local w = lineWidth(para)
+        count = count + math.max(1, (wrapWidth and wrapWidth > 0) and math.ceil(w / wrapWidth) or 1)
+      end
+      return count
+    end
+    local f = {
+      id = synthetic("id.Font." .. name), name = name, baseline = size, height = math.ceil(size * 1.35),
+      GetStringWidth = function(_, text, ignoreTags)
+        local best = 0
+        for line in (clean(text, ignoreTags) .. "\n"):gmatch("(.-)\n") do best = math.max(best, lineWidth(line)) end
+        return best
+      end,
+      GetStringWidthMultiline = function(_, text, wrapWidth, ignoreTags)
+        local best = 0
+        for line in (clean(text, ignoreTags) .. "\n"):gmatch("(.-)\n") do best = math.max(best, lineWidth(line)) end
+        return (wrapWidth and wrapWidth > 0) and math.min(best, wrapWidth) or best
+      end,
+      GetStringHeightAndLineCount = function(_, text, wrapWidth, lineSpacing, ignoreTags)
+        local lines = wrapLines(text, wrapWidth, ignoreTags)
+        return lines * (tonumber(lineSpacing) or math.ceil(size * 1.35)), lines
+      end,
+    }
+    return setmetatable(f, { __index = function(_, k) return stub("config.Font." .. name .. "." .. tostring(k)) end })
+  end
+  local fonts = setmetatable({}, { __index = function(t, name)
+    if type(name) ~= "string" then return nil end
+    if name == "FromID" then return function(v) local n = idName(v); return n and t[n:gsub("^id%.Font%.", "")] or nil end end
+    local f = makeFont(name)
+    rawset(t, name, f)
+    return f
+  end })
+  if isStub(config) then rawset(config, "Font", fonts) end
 end
 
 ---------------------------------------------------------------- running plugin code
@@ -780,7 +843,7 @@ function __rs3_dump()
       comps[#comps + 1] = {
         id = id, type = rec.type, kind = rec.kind, title = rec.title, root = rec.root or false,
         parent = rec.parent, children = rec.children, x = x, y = y, w = w, h = h,
-        posSet = rec.posSet, sizeSet = rec.sizeSet, pos = rec.pos, size = rec.size,
+        posSet = rec.posSet, sizeSet = rec.sizeSet, pos = rec.pos, size = rec.size, posAt = rec.posAt,
         props = rec.props, calls = rec.calls, hooks = hooks, file = rec.file, line = rec.line, scene = rec.scene,
       }
     end

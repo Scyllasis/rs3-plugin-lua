@@ -188,8 +188,8 @@ button:disabled, button:disabled.on { opacity: .4; cursor: default; background: 
 .gs-title { background: linear-gradient(#3e3223, #2a2219); box-shadow: inset 0 -1px 0 var(--rs-gold-dim), inset 0 1px 0 #6b5530; }
 .gs-close { background: radial-gradient(circle, #8a2a1c 55%, #4a160e 56%); border-radius: 3px; }
 .gs-close::after { content: "✕"; position: absolute; inset: 0; display: grid; place-items: center; color: #f3e6c4; font-size: 11px; }
-.gs-btn { background: linear-gradient(#6a5634, #3e3020); box-shadow: inset 0 1px 0 rgba(255,255,255,.15), inset 0 -1px 0 rgba(0,0,0,.5); }
-.gs-btn-pos { background: linear-gradient(#3f7a32, #24481c); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.5); }
+.gs-btn { background: linear-gradient(#2e4f68, #1a2f42); box-shadow: inset 0 1px 0 rgba(255,255,255,.15), inset 0 -1px 0 rgba(0,0,0,.5); }
+.gs-btn-pos { background: linear-gradient(#f0c96a, #b8862f); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.5); }
 .gs-btn-neg { background: linear-gradient(#8a3324, #4e1a12); box-shadow: inset 0 1px 0 rgba(255,255,255,.15), inset 0 -1px 0 rgba(0,0,0,.5); }
 .gs-track { background: #120f0b; box-shadow: inset 0 0 0 1px #3a2f22; }
 .gs-thumb { background: linear-gradient(90deg, #8a6d2c, #c8a24a, #8a6d2c); }
@@ -211,3 +211,24 @@ button:disabled, button:disabled.on { opacity: .4; cursor: default; background: 
 .switch input:checked + .track { background: var(--rs-gold-dim); border-color: var(--rs-gold); }
 .switch input:checked + .track .knob { transform: translateX(14px); background: #fff; }
 .switch input:focus-visible + .track { outline: 1px solid var(--vscode-focusBorder, #007fd4); outline-offset: 1px; }
+
+/* zoom buttons, panning and dragging */
+.icon-btn { min-width: 24px; padding: 0 6px; font-weight: 600; }
+.stage-wrap.pan-ready, .stage-wrap.pan-ready .c { cursor: grab; }
+.stage-wrap.panning, .stage-wrap.panning .c { cursor: grabbing; }
+.screen:not(.interact) .c:not(.root-window) { touch-action: none; }
+
+/* items and closed combo boxes */
+.gs-item { background: #15110c; box-shadow: inset 0 0 0 1px #4a3a20; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.gs-item .item-name { color: var(--rs-text); font-size: 9px; line-height: 1.05; text-align: center; padding: 1px; word-break: break-word; }
+.gs-item .item-qty { position: absolute; left: 2px; top: 1px; color: #ffff00; font-size: 10px; text-shadow: 1px 1px 0 #000; }
+.listbox.combo { display: flex; align-items: center; padding: 0 6px; }
+.listbox.combo .combo-text { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.listbox.combo .combo-arrow { color: var(--rs-gold); margin-left: 4px; }
+
+.gs-check-on { background: #120f0b; box-shadow: inset 0 0 0 1px var(--rs-gold); }
+.gs-check-on::after { content: "\2713"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--rs-gold); font-size: 11px; line-height: 1; }
+.spr-empty { outline: 1px dashed rgba(200,162,74,.18); outline-offset: -1px; }
+.stage-box { position: relative; display: grid; min-width: 0; min-height: 0; }
+.stage-box > .stage-wrap { min-width: 0; min-height: 0; }
+.stage-hint { max-width: calc(100% - 32px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: rgba(0,0,0,.45); padding: 1px 6px; border-radius: 3px; }
