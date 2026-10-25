@@ -378,7 +378,7 @@
   },
   "scripts": {
     "build:index": "node tools/build-index.js",
-    "package": "npm run build:index && vsce package --no-dependencies"
+    "package": "npm run build:index && npx --yes @vscode/vsce@3.6.0 package --no-dependencies"
   },
   "dependencies": {
     "wasmoon": "^1.16.0"
