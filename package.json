@@ -5,6 +5,14 @@
   "version": "0.7.0",
   "publisher": "sam-local",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Scyllasis/rs3-plugin-lua"
+  },
+  "bugs": {
+    "url": "https://github.com/Scyllasis/rs3-plugin-lua/issues"
+  },
+  "homepage": "https://github.com/Scyllasis/rs3-plugin-lua#readme",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -370,7 +378,7 @@
   },
   "scripts": {
     "build:index": "node tools/build-index.js",
-    "package": "npm run build:index && vsce package --allow-missing-repository"
+    "package": "npm run build:index && vsce package --no-dependencies"
   },
   "dependencies": {
     "wasmoon": "^1.16.0"
