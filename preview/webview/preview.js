@@ -295,6 +295,7 @@
       [/SLIDER_BAR_BACKING/, 'gs-track'], [/SLIDER_BAR/, 'gs-thumb'],
       [/TAB_CURRENT/, 'gs-tab-on'], [/TAB_/, 'gs-tab'],
       [/SLOT/, 'gs-slot'], [/CHECKBOX_SMALL_[245]$|RADIO.*(ON|SELECTED)/, 'gs-check-on'], [/CHECKBOX|RADIO/, 'gs-check'],
+      [/FRAME_TOP|DIVIDER|SEPARATOR/, 'gs-line'], // PrettyUI's divider and tab bar line
       [/CONTENT_TILE|BACKGROUND|_BG/, 'gs-fill'],
       [/WINDOW|FRAME|BORDER|CORNER|SIDE|EDGE|DIVIDER|LINE/, 'gs-frame'],
       [/ICON|BTN_|ARROW|INCREASE|DECREASE|ACCORDION/, 'gs-icon'],
@@ -311,6 +312,7 @@
     if (typeof p.alpha === 'number' && c.type !== 'Text') el.style.opacity = String(Math.max(0, Math.min(1, p.alpha)));
     if (p.hidden === true) el.classList.add('hidden-c');
     if (c.hooks.length) el.classList.add('hooked');
+    if (p.clickthrough === true) el.classList.add('clickthrough');
     if (!c.root && (c.w <= 0 || c.h <= 0)) el.classList.add('zero');
 
     switch (c.type) {
@@ -602,7 +604,11 @@
     }
     Object.assign(screen.style, { width: S.view.w + 'px', height: S.view.h + 'px' });
     Object.assign(world.style, { width: W + 'px', height: H + 'px', transform: `translate(${-S.view.x}px, ${-S.view.y}px)` });
-    for (const c of order) world.append(visual(c));
+    // In the game a hidden component hides everything inside it (inactive tabs, closed tooltips,
+    // unused scrollbars). Hidden components themselves stay faintly visible for inspection; their
+    // contents are only drawn with Bounds on.
+    const insideHidden = c => { for (let p = S.byId.get(c.parent); p; p = S.byId.get(p.parent)) if (p.props && p.props.hidden === true) return true; return false; };
+    for (const c of order) if (S.state.showBounds || !insideHidden(c)) world.append(visual(c));
     world.append(hoverBox, selBox);
     markClasses();
     layoutStage();
@@ -827,10 +833,12 @@
     vscode.postMessage({ type: 'fireHook', id, hook });
     setTimeout(() => { S.pressed = null; }, 150);
   }
+  // A click only runs click-type hooks (never scroll-wheel or mouse-over handlers).
+  const CLICK_HOOK = /PRESS|CLICK|CHECK|TOGGLE|SELECT|RELEASE|HOLD/i;
   function primaryHook(c) {
     if (!c || !c.hooks.length) return null;
-    const pref = c.hooks.find(x => /PRESS|CLICK|CHECK|TOGGLE|SELECT/i.test(x.name));
-    return (pref || c.hooks[0]).name;
+    const pref = c.hooks.find(x => /PRESS|CLICK|CHECK|TOGGLE|SELECT/i.test(x.name)) || c.hooks.find(x => CLICK_HOOK.test(x.name));
+    return pref ? pref.name : null;
   }
   function compAt(e) {
     const el = e.target.closest && e.target.closest('.c');
@@ -847,7 +855,7 @@
     if (S.state.interact) {
       // run the nearest component (or ancestor) that has a hook
       let k = c;
-      while (k && !k.hooks.length) k = S.byId.get(k.parent);
+      while (k && !primaryHook(k)) k = S.byId.get(k.parent);
       if (k) { fire(k.id, primaryHook(k)); return; }
     }
     select(c.id);

@@ -84,7 +84,7 @@ select.scene { min-width: 220px; font-weight: 600; }
 .show-bounds .c { outline: 1px dashed rgba(120,190,255,.55); outline-offset: -1px; }
 .c.zero { outline: none !important; }
 .c.zero::after { content: ""; position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; background: var(--err); box-shadow: 0 0 0 2px rgba(0,0,0,.6); }
-.c.hidden-c { opacity: .25; }
+.c.hidden-c { opacity: .25; pointer-events: none; } /* hidden in-game: no clicks */
 .hl { position: absolute; pointer-events: none; display: none; z-index: 2; }
 .hl.hover-box { outline: 2px solid var(--hover); }
 .hl.sel-box { outline: 2px solid var(--sel); box-shadow: 0 0 0 9999px rgba(0,0,0,.18); }
@@ -232,3 +232,9 @@ button:disabled, button:disabled.on { opacity: .4; cursor: default; background: 
 .stage-box { position: relative; display: grid; min-width: 0; min-height: 0; }
 .stage-box > .stage-wrap { min-width: 0; min-height: 0; }
 .stage-hint { max-width: calc(100% - 32px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: rgba(0,0,0,.45); padding: 1px 6px; border-radius: 3px; }
+
+/* thin game-sprite pieces: frame edges and dividers are lines, not filled blocks */
+.gs-line { background: linear-gradient(to bottom, transparent calc(50% - 1px), #6b5530 calc(50% - 1px), #6b5530 calc(50% + 1px), transparent calc(50% + 1px)); }
+
+/* Interact mode: click-through components pass clicks to whatever is beneath, as in-game */
+.interact .c.clickthrough { pointer-events: none; }
