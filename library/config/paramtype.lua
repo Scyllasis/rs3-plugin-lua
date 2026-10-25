@@ -1,0 +1,12 @@
+---@meta
+
+--- A param config: a typed key that other configs (Obj, NPC, Loc, Struct...) can hold values for. Proxy usertype; no constructor.
+--- Look up via `config.Param.NAME` or `config.Param.FromID(id)`.
+---
+--- [Docs](https://developer.runescape.com/rs/game/config/paramtype.html)
+---@class ParamType
+---@field id integer Read-only.
+---@field configName string e.g. "DEFEND_SOUND_1". Read-only.
+---@field typeName string Always "Param". Read-only.
+---@field valueType ValueType Data type the param holds. Read-only.
+---@field defaultValue any Type given by `valueType`. Read-only.

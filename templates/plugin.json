@@ -1,0 +1,10 @@
+{
+  "name": "{{name}}",
+  "version": "0.1.0",
+  "contactEmailAddress": "you@example.com",
+  "requiredDependencies": [],
+  "optionalDependencies": [],
+  "requiredPermissions": [],
+  "optionalPermissions": [],
+  "hasRibbonIcon": true
+}

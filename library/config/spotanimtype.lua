@@ -1,0 +1,11 @@
+---@meta
+
+--- A spot animation (graphical effect) config, used to construct SpotAnimEntity. Proxy usertype; no constructor. Docs list is incomplete (TODO).
+--- Look up via `config.SpotAnim.NAME` or `config.SpotAnim.FromID(id)`.
+---
+--- [Docs](https://developer.runescape.com/rs/game/config/spotanimtype.html)
+---@class SpotAnimType
+---@field id integer Read-only.
+---@field configName string e.g. "TELEGRAB_IMPACT". Read-only.
+---@field typeName string Always "SpotAnim". Read-only.
+---@field seqID integer ID of the SeqType played. Read-only.

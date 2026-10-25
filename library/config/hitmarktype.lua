@@ -1,0 +1,11 @@
+---@meta
+
+--- A hitmark config. Proxy usertype; no constructor. Docs list is incomplete (TODO).
+--- Look up via `config.Hitmark.NAME` or `config.Hitmark.FromID(id)`.
+---
+--- [Docs](https://developer.runescape.com/rs/game/config/hitmarktype.html)
+---@class HitmarkType
+---@field id integer Read-only.
+---@field configName string e.g. "MAGIC_DAMAGE". Read-only.
+---@field typeName string Always "Hitmark". Read-only.
+---@field duration integer Display time in client ticks. Read-only.

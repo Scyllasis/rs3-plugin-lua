@@ -1,0 +1,394 @@
+{
+  "name": "rs3-plugin-lua",
+  "displayName": "RS3 Plugin API (Lua)",
+  "description": "Autocomplete, hover docs, an API explorer, a live UI preview, a sprite maker and a style studio for RuneScape 3 Plugin Hub Lua plugins.",
+  "version": "0.6.1",
+  "publisher": "sam-local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Other"
+  ],
+  "keywords": [
+    "runescape",
+    "rs3",
+    "lua",
+    "plugin",
+    "jagex"
+  ],
+  "icon": "media/icon.png",
+  "main": "./extension.js",
+  "extensionDependencies": [
+    "sumneko.lua"
+  ],
+  "activationEvents": [
+    "onLanguage:lua",
+    "workspaceContains:**/plugin.json"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "rs3lua.enable",
+        "title": "RS3: Enable Plugin API for This Workspace",
+        "category": "RS3"
+      },
+      {
+        "command": "rs3lua.disable",
+        "title": "RS3: Disable Plugin API for This Workspace",
+        "category": "RS3"
+      },
+      {
+        "command": "rs3lua.newPlugin",
+        "title": "RS3: New Plugin\u2026",
+        "category": "RS3"
+      },
+      {
+        "command": "rs3lua.openDocs",
+        "title": "RS3: Open API Docs",
+        "category": "RS3",
+        "icon": "$(book)"
+      },
+      {
+        "command": "rs3lua.docsForSymbol",
+        "title": "RS3: Open Docs for Symbol Under Cursor",
+        "category": "RS3"
+      },
+      {
+        "command": "rs3lua.searchApi",
+        "title": "RS3: Search API\u2026",
+        "category": "RS3",
+        "icon": "$(search)"
+      },
+      {
+        "command": "rs3lua.explorer.insert",
+        "title": "Insert at Cursor",
+        "icon": "$(insert)"
+      },
+      {
+        "command": "rs3lua.explorer.openDocs",
+        "title": "Open Docs",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "rs3lua.explorer.copy",
+        "title": "Copy Name",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "rs3lua.cheats",
+        "title": "RS3: Show Developer Cheats & Console Commands",
+        "category": "RS3",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "rs3lua.preview",
+        "title": "RS3: Open UI Preview",
+        "category": "RS3",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "rs3lua.newSprite",
+        "title": "RS3: New Sprite\u2026",
+        "category": "RS3",
+        "icon": "$(paintcan)"
+      },
+      {
+        "command": "rs3lua.editSprite",
+        "title": "RS3: Edit in Sprite Maker",
+        "category": "RS3",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "rs3lua.styleStudio",
+        "title": "RS3: Open Style Studio",
+        "category": "RS3",
+        "icon": "$(symbol-color)"
+      },
+      {
+        "command": "rs3lua.checkSetup",
+        "title": "RS3: Check Setup (fix missing completions)",
+        "category": "RS3",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "rs3lua.probe.create",
+        "title": "RS3: Create API Probe Plugin (test the API on the beta)",
+        "category": "RS3",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "rs3lua.probe.receive",
+        "title": "RS3: Start Probe Receiver",
+        "category": "RS3"
+      },
+      {
+        "command": "rs3lua.probe.import",
+        "title": "RS3: Import Probe Output (console text)",
+        "category": "RS3"
+      },
+      {
+        "command": "rs3lua.probe.report",
+        "title": "RS3: Show Last Probe Report",
+        "category": "RS3"
+      },
+      {
+        "command": "rs3lua.findItem",
+        "title": "RS3: Find Item\u2026",
+        "category": "RS3",
+        "icon": "$(search-fuzzy)"
+      },
+      {
+        "command": "rs3lua.catalog.updateWiki",
+        "title": "RS3: Update Item List from the RS Wiki",
+        "category": "RS3"
+      },
+      {
+        "command": "rs3lua.catalog.createExport",
+        "title": "RS3: Create Item Export Plugin (your bank/backpack/worn items)",
+        "category": "RS3"
+      },
+      {
+        "command": "rs3lua.catalog.clear",
+        "title": "RS3: Clear Item List",
+        "category": "RS3"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "rs3lua",
+          "title": "RS3 Plugin API",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "rs3lua": [
+        {
+          "id": "rs3lua.explorer",
+          "name": "API Explorer"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "rs3lua.findItem",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.preview",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.newSprite",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.styleStudio",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.searchApi",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.openDocs",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.cheats",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.checkSetup",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.probe.create",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "rs3lua.explorer.insert",
+          "when": "view == rs3lua.explorer && viewItem =~ /insertable/",
+          "group": "inline"
+        },
+        {
+          "command": "rs3lua.explorer.openDocs",
+          "when": "view == rs3lua.explorer && viewItem =~ /docs/",
+          "group": "inline"
+        },
+        {
+          "command": "rs3lua.explorer.copy",
+          "when": "view == rs3lua.explorer && viewItem =~ /insertable/"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "rs3lua.docsForSymbol",
+          "when": "editorLangId == lua",
+          "group": "navigation@90"
+        },
+        {
+          "command": "rs3lua.findItem",
+          "when": "editorLangId == lua",
+          "group": "navigation@91"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "rs3lua.explorer.insert",
+          "when": "false"
+        },
+        {
+          "command": "rs3lua.explorer.openDocs",
+          "when": "false"
+        },
+        {
+          "command": "rs3lua.explorer.copy",
+          "when": "false"
+        },
+        {
+          "command": "rs3lua.editSprite",
+          "when": "true"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "rs3lua.preview",
+          "when": "resourceLangId == lua || resourceFilename == plugin.json",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.editSprite",
+          "when": "resourceExtname == .png",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "rs3lua.preview",
+          "when": "resourceFilename == plugin.json || resourceFilename == main.lua",
+          "group": "navigation@90"
+        },
+        {
+          "command": "rs3lua.editSprite",
+          "when": "resourceExtname == .png",
+          "group": "navigation@91"
+        },
+        {
+          "command": "rs3lua.newSprite",
+          "when": "explorerResourceIsFolder && resourceFilename == resources || explorerResourceIsFolder && resourcePath =~ /[\\\\/]resources[\\\\/]/",
+          "group": "navigation@92"
+        }
+      ]
+    },
+    "snippets": [
+      {
+        "language": "lua",
+        "path": "./snippets/rs3.code-snippets"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "plugin.json",
+        "url": "./schemas/plugin.schema.json"
+      }
+    ],
+    "configuration": {
+      "title": "RS3 Plugin API",
+      "properties": {
+        "rs3lua.autoEnable": {
+          "type": "string",
+          "enum": [
+            "whenPluginJson",
+            "always",
+            "never"
+          ],
+          "default": "whenPluginJson",
+          "markdownDescription": "When to add the RS3 API definitions to the Lua language server for a workspace. `whenPluginJson` turns it on for any workspace containing a `plugin.json`."
+        },
+        "rs3lua.docsBaseUrl": {
+          "type": "string",
+          "default": "https://developer.runescape.com/rs/",
+          "description": "Base URL of the official RuneScape Client API documentation."
+        },
+        "rs3lua.preview.resolution": {
+          "type": "string",
+          "default": "1920x1080",
+          "enum": [
+            "1280x720",
+            "1366x768",
+            "1600x900",
+            "1920x1080",
+            "2560x1440",
+            "3440x1440",
+            "3840x2160"
+          ],
+          "description": "Default client resolution for the UI preview."
+        },
+        "rs3lua.preview.uiScale": {
+          "type": "number",
+          "default": 1,
+          "enum": [
+            0.75,
+            1,
+            1.25,
+            1.5,
+            2
+          ],
+          "description": "Default interface scaling for the UI preview (interface units = pixels / scale)."
+        },
+        "rs3lua.preview.contentWindowSize": {
+          "type": "string",
+          "default": "420x560",
+          "pattern": "^\\d+\\s*x\\s*\\d+$",
+          "markdownDescription": "Size (interface units, `WIDTHxHEIGHT`) the preview uses for the plugin window opened from the ribbon icon (`Event.ContentLayerReady`). The docs don't state the real size; match it to what you see in-game."
+        },
+        "rs3lua.preview.settingsWindowSize": {
+          "type": "string",
+          "default": "520x420",
+          "pattern": "^\\d+\\s*x\\s*\\d+$",
+          "markdownDescription": "Size the preview uses for the plugin settings window (`Event.SettingsLayerReady`)."
+        },
+        "rs3lua.probe.port": {
+          "type": "number",
+          "default": 47321,
+          "minimum": 1024,
+          "maximum": 65535,
+          "markdownDescription": "Local port the RS3 API Probe sends results to (`http://127.0.0.1:<port>`). Recreate the probe plugin after changing it."
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "rs3lua.findItem",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+alt+i",
+        "when": "editorLangId == lua"
+      }
+    ]
+  },
+  "scripts": {
+    "build:index": "node tools/build-index.js",
+    "package": "npm run build:index && vsce package --allow-missing-repository"
+  },
+  "dependencies": {
+    "wasmoon": "^1.16.0"
+  }
+}

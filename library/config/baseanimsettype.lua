@@ -1,0 +1,11 @@
+---@meta
+
+--- Animation set (Seqs) used by entities for common actions such as walking and running. Proxy usertype; no constructor.
+--- Look up via `config.BaseAnimSet.NAME` or `config.BaseAnimSet.FromID(id)`.
+---
+--- [Docs](https://developer.runescape.com/rs/game/config/baseanimsettype.html)
+---@class BaseAnimSetType
+---@field id integer Read-only.
+---@field configName string e.g. "HUMAN_WALK_ROPEBALANCE". Read-only.
+---@field typeName string Always "BaseAnimSet". Read-only.
+---@field overlayHeight integer Height (fine units) above the entity where headbars/hitmarks are drawn. Read-only.

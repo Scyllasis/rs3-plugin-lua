@@ -1,0 +1,13 @@
+---@meta
+
+--- One of the game's custom cursors. Proxy usertype; no constructor.
+--- Look up via `config.Cursor.NAME` or `config.Cursor.FromID(id)`.
+---
+--- [Docs](https://developer.runescape.com/rs/game/config/cursortype.html)
+---@class CursorType
+---@field id integer Read-only.
+---@field configName string e.g. "CURSOR_UNLOCK". Read-only.
+---@field typeName string Always "Cursor". Read-only.
+---@field hotspotX integer Horizontal pixel in the source sprite where clicks register. Read-only.
+---@field hotspotY integer Vertical pixel in the source sprite where clicks register. Read-only.
+---@field spriteID integer ID of the source sprite. Read-only.

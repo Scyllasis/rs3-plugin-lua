@@ -1,0 +1,71 @@
+{
+  "RS3: Subscribe to event": {
+    "prefix": ["rs3event", "evsub"],
+    "description": "Subscribe a function to an RS3 client event",
+    "body": [
+      "Event.${1|Logic,ServerLogic,Draw,EntityDraw,GameStateChanged,ChatMessage,InventoryAdded,InventoryUpdated,InventoryRemoved,SkillTransmit,VarTransmit,RunEnergyTransmit,RunWeightTransmit,GrandExchangeOfferUpdated,NPCEntityAdded,NPCEntityRemoved,PlayerEntityAdded,PlayerEntityRemoved,ObjStackEntityAdded,ObjStackEntityChanged,ObjStackEntityRemoved,LocAdded,LocRemoved,LocAnimation,LocCustomised,MiniMenuOpened,MiniMenuClosed,MiniMenuReady,MiniMenuEntryAdded,MiniMenuEntrySelected,KeyDown,KeyUp,KeyTyped,WindowFocusChanged,WindowSizeChanged,WorldCreated,WorldUpdated,RegionCreated,RegionUpdated,SettingsLayerReady,ContentLayerReady,OptionalDependencyChanged,OptionalPermissionChanged|}.Subscribe(\"${2:myHandler}\", function(e)",
+      "\t$0",
+      "end)"
+    ]
+  },
+  "RS3: Unsubscribe from event": {
+    "prefix": ["rs3unsub", "evunsub"],
+    "body": ["Event.${1:Logic}.Unsubscribe(\"${2:myHandler}\")"]
+  },
+  "RS3: Skill XP gained": {
+    "prefix": "rs3xp",
+    "description": "React to XP drops via SkillTransmit",
+    "body": [
+      "Event.SkillTransmit.Subscribe(\"${1:xpTracker}\", function(e)",
+      "\tlocal gained = e.newXP - e.oldXP",
+      "\tif gained > 0 then",
+      "\t\tlog(formatStr(\"{} +{} xp\", SkillType.FromID(e.skill), gained))",
+      "\tend",
+      "end)"
+    ]
+  },
+  "RS3: Inventory updated": {
+    "prefix": "rs3inv",
+    "body": [
+      "Event.InventoryUpdated.Subscribe(\"${1:invWatcher}\", function(e)",
+      "\t-- e.inv is the InvType config of the inventory that changed",
+      "\t$0",
+      "end)"
+    ]
+  },
+  "RS3: Shutdown hook": {
+    "prefix": "rs3shutdown",
+    "description": "Global PluginShutdown, called when the plugin is disabled",
+    "body": [
+      "function PluginShutdown()",
+      "\t$0",
+      "end"
+    ]
+  },
+  "RS3: PersistentDB load/save": {
+    "prefix": "rs3db",
+    "body": [
+      "local ${1:state} = PersistentDB:GetStructuredData(\"${2:state}\") or {}",
+      "",
+      "function PluginShutdown()",
+      "\tPersistentDB:SetStructuredData(\"${2:state}\", ${1:state})",
+      "end"
+    ]
+  },
+  "RS3: formatStr log": {
+    "prefix": ["rs3log", "logf"],
+    "body": ["log(formatStr(\"${1:{}}\", ${2:value}))"]
+  },
+  "RS3: Player skill level": {
+    "prefix": "rs3level",
+    "body": ["Player.GetLevelGameplay(SkillType.${1:ATTACK})"]
+  },
+  "RS3: Read a VarPlayer": {
+    "prefix": "rs3var",
+    "body": ["var.VarPlayer.${1:NAME}.value"]
+  },
+  "RS3: Run console command": {
+    "prefix": "rs3cmd",
+    "body": ["ExecuteConsoleCommand(\"${1:!bank}\")"]
+  }
+}

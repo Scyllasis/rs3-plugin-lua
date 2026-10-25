@@ -1,0 +1,22 @@
+---@meta
+
+--- An active NPC in the game world. Proxy usertype: safe to copy and store, not usable with
+--- persistent storage. No constructor; obtain via `NPCList`. Check `isValid` before reading properties.
+---
+--- [Docs](https://developer.runescape.com/rs/game/entity/npcentity.html)
+---@class NPCEntity
+---@field isValid boolean Whether the entity still exists. Dispose of it when invalid. Read-only.
+---@field uid integer Unique ID (UID). Read-only.
+---@field displayName string Display name. Read-only.
+---@field config NPCType Config used by the entity. Read-only.
+---@field parentConfig NPCType Parent config, if a MultiNPC. Read-only.
+---@field configID integer ID of the config. Read-only.
+---@field parentConfigID integer ID of the parent config, if a MultiNPC. Read-only.
+---@field isMultiNPC boolean Whether this is a MultiNPC. Read-only.
+---@field position Vector3 World position. Read-only.
+---@field coordGrid CoordGrid Tile the entity is on. Read-only.
+---@field aabb AABB Current bounding box. Read-only.
+---@field facing integer Current facing angle in degrees. Read-only.
+---@field facingTarget integer Target facing angle in degrees; the entity turns toward it. Read-only.
+---@field route CoordGrid[] Coordinates of the current movement route (current position if not moving). Read-only.
+---@field routeEnd CoordGrid? Final coordinate of the route (current position if not moving). Read-only.

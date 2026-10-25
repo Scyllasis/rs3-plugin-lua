@@ -1,0 +1,11 @@
+---@meta
+
+--- A headbar config (bars drawn above entities). Proxy usertype; no constructor. Docs list is incomplete (TODO).
+--- Look up via `config.Headbar.NAME` or `config.Headbar.FromID(id)`.
+---
+--- [Docs](https://developer.runescape.com/rs/game/config/headbartype.html)
+---@class HeadbarType
+---@field id integer Read-only.
+---@field configName string e.g. "ADRENALINE_DEFAULT". Read-only.
+---@field typeName string Always "Headbar". Read-only.
+---@field displayOrder integer Read-only.

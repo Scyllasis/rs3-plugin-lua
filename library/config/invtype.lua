@@ -1,0 +1,12 @@
+---@meta
+
+--- An inventory config (e.g. bank, shop stock). Proxy usertype; no constructor.
+--- Look up via `config.Inv.NAME` or `config.Inv.FromID(id)`.
+---
+--- [Docs](https://developer.runescape.com/rs/game/config/invtype.html)
+---@class InvType
+---@field id integer Read-only.
+---@field configName string e.g. "BANK". Read-only.
+---@field typeName string Always "Inv". Read-only. -- unverified: value not stated on page
+---@field size integer Read-only.
+---@field stockCount integer Number of stock ObjTypes. Read-only.

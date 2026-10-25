@@ -1,0 +1,17 @@
+---@meta
+
+--- An active player in the game world. No constructor; obtain via `PlayerList`.
+--- Check `isValid` before reading properties.
+---
+--- [Docs](https://developer.runescape.com/rs/game/entity/playerentity.html)
+---@class PlayerEntity
+---@field isValid boolean Whether the entity still exists. Dispose of it when invalid. Read-only.
+---@field uid integer Unique ID (UID). Read-only.
+---@field displayName string Display name. Read-only.
+---@field position Vector3 World position. Read-only.
+---@field coordGrid CoordGrid Tile the player is on. Read-only.
+---@field aabb AABB Current bounding box. Read-only.
+---@field facing integer Current facing angle in degrees. Read-only.
+---@field facingTarget integer Target facing angle in degrees; the player turns toward it. Read-only.
+---@field route CoordGrid[] Coordinates of the current movement route (current position if not moving). Read-only.
+---@field routeEnd CoordGrid? Final coordinate of the route (current position if not moving). Read-only.

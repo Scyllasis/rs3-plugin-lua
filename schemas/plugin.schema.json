@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RuneScape 3 plugin manifest (plugin.json)",
+  "description": "Manifest for an RS3 Plugin Hub Lua plugin. See https://developer.runescape.com/rs/structure.html",
+  "type": "object",
+  "required": ["name", "version", "contactEmailAddress"],
+  "definitions": {
+    "dependencies": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Plugin names. Each dependency is imported under its plugin name."
+        },
+        {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 },
+          "description": "Map of variable name -> plugin name. Use this form to rename a dependency (required when a plugin name starts with '!')."
+        }
+      ]
+    },
+    "permissions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["httpAccess", "chatAccess", "trackingAccess"],
+        "enumDescriptions": [
+          "Enables HTTP requests to the base URLs listed in \"urls\".",
+          "Enables the Chat API and the ChatMessage event.",
+          "Enables Tracking ID functionality."
+        ]
+      }
+    }
+  },
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "User-friendly plugin name."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "User-friendly version string, e.g. \"1.0.0\"."
+    },
+    "contactEmailAddress": {
+      "type": "string",
+      "format": "email",
+      "description": "Contact address shown to users (a legal requirement). Jagex recommends it differs from your mod.io account email."
+    },
+    "requiredDependencies": {
+      "$ref": "#/definitions/dependencies",
+      "description": "Plugins this plugin needs in order to work."
+    },
+    "optionalDependencies": {
+      "$ref": "#/definitions/dependencies",
+      "description": "Plugins that add functionality but are not needed. Changes are reported via Event.OptionalDependencyChanged."
+    },
+    "requiredPermissions": {
+      "$ref": "#/definitions/permissions",
+      "description": "Permissions the plugin needs to function."
+    },
+    "optionalPermissions": {
+      "$ref": "#/definitions/permissions",
+      "description": "Permissions that only add functionality. Check at runtime with Plugin.HasPermission(PluginPermissions.X)."
+    },
+    "urls": {
+      "type": "object",
+      "description": "Base URLs the plugin may call, read in Lua as Plugin.urls.<name>. HTTP/HTTPS only; no URL shorteners or redirect services (plugins are rejected for these).",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^https?://[^\\s/$.?#].[^\\s]*$"
+      }
+    },
+    "hasSettingsIcon": {
+      "type": "boolean",
+      "description": "Show a settings icon; required for Event.SettingsLayerReady."
+    },
+    "hasRibbonIcon": {
+      "type": "boolean",
+      "description": "Show a ribbon icon; required for Event.ContentLayerReady."
+    }
+  },
+  "patternProperties": {
+    "^remote": { "description": "Fields added for plugins retrieved from a remote repository." }
+  },
+  "additionalProperties": {
+    "description": "Not a documented plugin.json key."
+  }
+}
