@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.8.0 — 2026-10-31
+### Added
+- **UI Builder** (**RS3: Open UI Builder**): drag parts onto a window to make a UI. Move, resize, nest, pin, line up, reorder, undo, copy and paste, with snapping and smart guides. Saves a design and a Lua module as you work, and your code stays in handlers so regenerating never touches it. Every change is test-run in the preview's mock client.
+- **A PrettyUI / Plain switch** in the UI Builder. PrettyUI mode generates real PrettyUI components (FancyButton, ComboBox, Slider and so on) and adds Divider, Spinner, Colour picker, Keybind and Item slot. Plain mode uses only the client's own parts, with no library. Switch at any time: parts keep their place and settings.
+- **RS3: Open Plugin Data**: browse what every plugin has saved in the client's `PluginData.db`, live. It only ever reads.
+- **RS3: Add Log Capture**: shows a plugin's `log()` lines in Plugin Data. The client doesn't write its console to a file, so a small development-only module copies them to saved data, and Check Plugin reminds you to take it out before uploading.
+- **RS3: Deploy to Game**: copies a plugin into `dev_plugins` and the console commands to the clipboard. Removes only files it put there, and never merges into a folder it didn't make without asking. `rs3lua.deploy.onSave` deploys on save.
+- **RS3: Check Plugin**: checks permissions against the code, Mod.io's rules, placeholder values and in-game gotchas the docs don't mention. Runs on save (`rs3lua.check.onSave`), with results in the Problems panel.
+- **RS3: Package for Upload** builds the zip Mod.io wants, and **RS3: Open Upload Checklist** covers the Mod.io page.
+- A **getting started walkthrough**.
+- Automated tests: `npm test`, `npm run test:browser` (drives the builder with a real mouse in Edge or Chrome) and `npm run test:smoke` (runs the extension in real VS Code).
+
+### Fixed
+- **New plugins could fail to load.** The plain template wrote `"requiredDependencies": []`, and the beta client refuses arrays there ("unexpected json Array, expected a json Object"). Check Plugin flags existing plugins with this, though the docs still show arrays.
+- A plugin name containing a quote or `$` corrupted the new `plugin.json` and `main.lua`.
+- Any `plugin.json` turned the extension on and changed that workspace's settings, including ones from other tools. It now needs to look like an RS3 plugin, and schema errors no longer appear on `.claude-plugin/plugin.json`.
+
+### Security and reliability
+- The extension no longer stops working entirely when the Lua extension is missing or disabled. The Builder, Preview, Deploy and the rest all run, and **RS3: Check Setup** offers the fix. It still installs alongside this one from the marketplace.
+- Web pages can no longer send to the item receiver: requests with an `Origin` header or a non-local `Host` are refused.
+- Webviews can't open or edit files outside the plugin folder.
+- Webview nonces come from a secure random source.
+- A runaway plugin in the preview stops at 256 MB and says so.
+- A failing command or webview message now shows an error and is logged to the **RS3 Plugin API** output, rather than failing silently. One feature failing to start no longer stops the others.
+- Generated files, `.luarc.json` and saved settings are written atomically, so a crash can't leave half a file.
+- The preview no longer leaks a Lua state when a plugin fails to start, and survives being closed mid-run. A failed hook no longer stalls everything queued after it.
+- Item export text no longer breaks on characters split across network chunks.
+
 ## 0.7.0 — 2026-10-25
 ### Added
 - **PrettyUI support.** List `"prettyui": 6398181` under `requiredDependencies` (or `optionalDependencies`) and the `prettyui` global gets completions, hover docs, signature help and type checking for every component, option table and callback. Definitions load and unload as plugin.json changes, `.luarc.json` setups included, and **RS3: Check Setup** reports when they are missing. Only editor definitions are shipped, written from the public PrettyUI docs.

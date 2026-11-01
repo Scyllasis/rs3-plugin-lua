@@ -4,6 +4,8 @@
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
+const util = require('./util');
+const { isPluginManifest } = require('./check/lib');
 
 const LUA_EXT = 'sumneko.lua';
 // Our library folder, and the deps/<name> folders for library plugins (any extension version).
@@ -38,7 +40,12 @@ function findPluginRoot(file) {
     return f(file, roots);
   } catch { return undefined; }
 }
-function hasManifest(dir) { return !!dir && fs.existsSync(path.join(dir, 'plugin.json')); }
+// Other tools use plugin.json too, so a file of that name alone doesn't make a folder ours to configure.
+function hasManifest(dir) {
+  if (!dir) return false;
+  try { return isPluginManifest(fs.readFileSync(path.join(dir, 'plugin.json'), 'utf8'), fs.existsSync(path.join(dir, 'main.lua'))); }
+  catch { return false; }
+}
 
 // ---------------------------------------------------------------- library plugin dependencies
 /** Library plugins we ship definitions for (deps/index.json), keyed by dependency alias. */
@@ -191,7 +198,7 @@ async function patchLuarc(rc, folderPath) {
   const next = [...keep, libPath(), ...depLibs(folderPath)];
   if (rc.flat) data['workspace.library'] = next;
   else { data.workspace = data.workspace || {}; data.workspace.library = next; }
-  fs.writeFileSync(rc.file, JSON.stringify(data, null, 2) + '\n');
+  util.writeFileAtomic(rc.file, JSON.stringify(data, null, 2) + '\n');
   return true;
 }
 
@@ -231,7 +238,7 @@ async function fixIssue(issue, doc) {
       const rc = folder && luarcFor(folder.uri.fsPath);
       if (rc && rc.data && (rc.data['runtime.version'] || (rc.data.runtime && rc.data.runtime.version))) {
         if (rc.data['runtime.version']) rc.data['runtime.version'] = 'Lua 5.4'; else rc.data.runtime.version = 'Lua 5.4';
-        if (!rc.hasComments) fs.writeFileSync(rc.file, JSON.stringify(rc.data, null, 2) + '\n');
+        if (!rc.hasComments) util.writeFileAtomic(rc.file, JSON.stringify(rc.data, null, 2) + '\n');
         else await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(rc.file));
       } else await vscode.workspace.getConfiguration('Lua', doc && doc.uri).update('runtime.version', 'Lua 5.4',
         folder ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global);
@@ -328,6 +335,8 @@ function updateStatus() {
   status.show();
 }
 
+const autoFix = util.guard('auto setup', maybeAutoFix);
+
 function activate(context) {
   ctx = context;
   status = vscode.window.createStatusBarItem('rs3lua.status', vscode.StatusBarAlignment.Right, 100);
@@ -335,20 +344,20 @@ function activate(context) {
   status.command = 'rs3lua.checkSetup';
   context.subscriptions.push(
     status,
-    vscode.commands.registerCommand('rs3lua.checkSetup', checkSetup),
-    vscode.window.onDidChangeActiveTextEditor(e => { updateStatus(); if (e) maybeAutoFix(e.document); }),
-    vscode.workspace.onDidOpenTextDocument(d => maybeAutoFix(d)),
+    util.command('rs3lua.checkSetup', checkSetup),
+    vscode.window.onDidChangeActiveTextEditor(e => { updateStatus(); if (e) autoFix(e.document); }),
+    vscode.workspace.onDidOpenTextDocument(d => autoFix(d)),
     vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('Lua') || e.affectsConfiguration('rs3lua')) updateStatus(); }),
     vscode.workspace.onDidSaveTextDocument(d => {
       if (/\.luarc\.jsonc?$/.test(d.uri.fsPath)) updateStatus();
       // dependencies may have changed: add or drop library plugin definitions
-      if (path.basename(d.uri.fsPath) === 'plugin.json') enableFolders();
+      if (path.basename(d.uri.fsPath) === 'plugin.json') enableFolders().catch(e => util.logError('enableFolders', e));
     }),
     vscode.extensions.onDidChange(() => updateStatus())
   );
   const ed = vscode.window.activeTextEditor;
-  if (ed) maybeAutoFix(ed.document);
-  for (const d of vscode.workspace.textDocuments) if (d !== (ed && ed.document)) maybeAutoFix(d);
+  if (ed) autoFix(ed.document);
+  for (const d of vscode.workspace.textDocuments) if (d !== (ed && ed.document)) autoFix(d);
   updateStatus();
 }
 
@@ -359,8 +368,8 @@ async function enableFolders() {
   for (const folder of vscode.workspace.workspaceFolders || []) {
     let yes = mode === 'always';
     if (!yes) {
-      const found = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/plugin.json'), '**/node_modules/**', 1);
-      yes = found.length > 0;
+      const found = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, '**/plugin.json'), '**/node_modules/**', 25);
+      yes = found.some(f => hasManifest(path.dirname(f.fsPath)));
     }
     if (yes) { try { await setLibrary(folder, true); } catch (e) { console.error('[rs3lua] enable failed', e); } }
   }

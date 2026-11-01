@@ -1,8 +1,8 @@
 {
   "name": "rs3-plugin-lua",
   "displayName": "RS3 Plugin API (Lua)",
-  "description": "Autocomplete, hover docs, an API explorer, a live UI preview, a sprite maker and a style studio for RuneScape 3 Plugin Hub Lua plugins, with PrettyUI support.",
-  "version": "0.7.0",
+  "description": "Autocomplete, hover docs, a drag-and-drop UI builder for PrettyUI and plain UI, a live UI preview, deploy to the game, a plugin data and log viewer, plugin checks, a sprite maker and a style studio for RuneScape 3 Plugin Hub Lua plugins.",
+  "version": "0.8.0",
   "publisher": "sam-local",
   "license": "MIT",
   "repository": {
@@ -30,7 +30,7 @@
   ],
   "icon": "media/icon.png",
   "main": "./extension.js",
-  "extensionDependencies": [
+  "extensionPack": [
     "sumneko.lua"
   ],
   "activationEvents": [
@@ -147,6 +147,41 @@
         "command": "rs3lua.catalog.clear",
         "title": "RS3: Clear Item List",
         "category": "RS3"
+      },
+      {
+        "command": "rs3lua.uiBuilder",
+        "title": "RS3: Open UI Builder",
+        "icon": "$(layout)"
+      },
+      {
+        "command": "rs3lua.deploy",
+        "title": "RS3: Deploy to Game",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "rs3lua.checkPlugin",
+        "title": "RS3: Check Plugin",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "rs3lua.package",
+        "title": "RS3: Package for Upload",
+        "icon": "$(package)"
+      },
+      {
+        "command": "rs3lua.submissionChecklist",
+        "title": "RS3: Open Upload Checklist",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "rs3lua.pluginData",
+        "title": "RS3: Open Plugin Data",
+        "icon": "$(database)"
+      },
+      {
+        "command": "rs3lua.addLogCapture",
+        "title": "RS3: Add Log Capture",
+        "icon": "$(output)"
       }
     ],
     "viewsContainers": {
@@ -175,6 +210,26 @@
         },
         {
           "command": "rs3lua.preview",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.checkPlugin",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.pluginData",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.deploy",
+          "when": "view == rs3lua.explorer",
+          "group": "navigation"
+        },
+        {
+          "command": "rs3lua.uiBuilder",
           "when": "view == rs3lua.explorer",
           "group": "navigation"
         },
@@ -282,6 +337,11 @@
           "command": "rs3lua.newSprite",
           "when": "explorerResourceIsFolder && resourceFilename == resources || explorerResourceIsFolder && resourcePath =~ /[\\\\/]resources[\\\\/]/",
           "group": "navigation@92"
+        },
+        {
+          "command": "rs3lua.uiBuilder",
+          "when": "resourcePath =~ /[\\\\/]\\.rs3[\\\\/]ui[\\\\/][^\\\\/]+\\.json$/",
+          "group": "navigation"
         }
       ]
     },
@@ -293,7 +353,11 @@
     ],
     "jsonValidation": [
       {
-        "fileMatch": "plugin.json",
+        "fileMatch": [
+          "plugin.json",
+          "!**/.claude-plugin/plugin.json",
+          "!**/node_modules/**"
+        ],
         "url": "./schemas/plugin.schema.json"
       }
     ],
@@ -364,6 +428,16 @@
           "type": "string",
           "default": "",
           "markdownDescription": "The game client's `dev_plugins` folder. Leave empty to find it automatically (`%ProgramData%\\Jagex\\RuneScape-BETA\\dev_plugins` or `RuneScape\\dev_plugins`)."
+        },
+        "rs3lua.check.onSave": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Run **RS3: Check Plugin** when a plugin's Lua or JSON file is saved. Results go to the Problems panel."
+        },
+        "rs3lua.deploy.onSave": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Copy a plugin into the client's `dev_plugins` folder whenever one of its files is saved. Applies only to plugins you've already deployed once with **RS3: Deploy to Game**."
         }
       }
     },
@@ -374,11 +448,78 @@
         "mac": "cmd+alt+i",
         "when": "editorLangId == lua"
       }
+    ],
+    "walkthroughs": [
+      {
+        "id": "rs3lua.start",
+        "title": "Make your first RS3 plugin",
+        "description": "From an empty folder to your plugin running in the game.",
+        "steps": [
+          {
+            "id": "new",
+            "title": "Create a plugin",
+            "description": "Pick a folder, then start from a template.\n[New Plugin](command:rs3lua.newPlugin)",
+            "media": {
+              "markdown": "walkthrough/new.md"
+            },
+            "completionEvents": [
+              "onCommand:rs3lua.newPlugin"
+            ]
+          },
+          {
+            "id": "build",
+            "title": "Draw your UI",
+            "description": "Drag buttons, text and more onto a window, and the Lua is written for you.\n[Open UI Builder](command:rs3lua.uiBuilder)",
+            "media": {
+              "markdown": "walkthrough/build.md"
+            },
+            "completionEvents": [
+              "onCommand:rs3lua.uiBuilder"
+            ]
+          },
+          {
+            "id": "preview",
+            "title": "See it without the game",
+            "description": "Your real code runs against a simulated client.\n[Open UI Preview](command:rs3lua.preview)",
+            "media": {
+              "markdown": "walkthrough/preview.md"
+            },
+            "completionEvents": [
+              "onCommand:rs3lua.preview"
+            ]
+          },
+          {
+            "id": "deploy",
+            "title": "Run it in the game",
+            "description": "Copies the plugin into the client and the console commands to your clipboard.\n[Deploy to Game](command:rs3lua.deploy)",
+            "media": {
+              "markdown": "walkthrough/deploy.md"
+            },
+            "completionEvents": [
+              "onCommand:rs3lua.deploy"
+            ]
+          },
+          {
+            "id": "ship",
+            "title": "Get it ready to upload",
+            "description": "Check it against the client's and Jagex's rules, then build the zip.\n[Check Plugin](command:rs3lua.checkPlugin)",
+            "media": {
+              "markdown": "walkthrough/ship.md"
+            },
+            "completionEvents": [
+              "onCommand:rs3lua.checkPlugin"
+            ]
+          }
+        ]
+      }
     ]
   },
   "scripts": {
     "build:index": "node tools/build-index.js",
-    "package": "npm run build:index && npx --yes @vscode/vsce@3.6.0 package --no-dependencies"
+    "package": "npm run build:index && npx --yes @vscode/vsce@3.6.0 package --no-dependencies",
+    "test": "node --test test/builder.test.js test/tools.test.js test/panel.test.js test/data.test.js",
+    "test:browser": "node test/browser/builder.browser.js && node test/browser/data.browser.js",
+    "test:smoke": "node test/smoke/run.js"
   },
   "dependencies": {
     "wasmoon": "^1.16.0"

@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { BUILTINS, DOC_KEYS, GEN_HEADER, generateLua } = require('./lib');
+const util = require('../util');
 
 const panels = new Map(); // root -> StudioPanel
 
@@ -27,13 +28,13 @@ class StudioPanel {
     });
     this.panel.iconPath = vscode.Uri.file(path.join(context.extensionPath, 'media', 'icon.png'));
     this.panel.webview.html = this.html();
-    this.panel.webview.onDidReceiveMessage(m => this.onMessage(m));
+    this.panel.webview.onDidReceiveMessage(util.guard('Style Studio', m => this.onMessage(m)));
     this.panel.onDidDispose(() => panels.delete(root));
   }
 
   f(...p) { return path.join(this.root, ...p); }
   readJson(rel, def) { try { return JSON.parse(fs.readFileSync(this.f(rel), 'utf8')); } catch { return def; } }
-  writeJson(rel, data) { fs.mkdirSync(path.dirname(this.f(rel)), { recursive: true }); fs.writeFileSync(this.f(rel), JSON.stringify(data, null, 2) + '\n'); }
+  writeJson(rel, data) { util.writeFileAtomic(this.f(rel), JSON.stringify(data, null, 2) + '\n'); }
 
   catalog() {
     const c = this.readJson('.rs3/stylevalues.json', { keys: {}, sheets: {} });
@@ -61,7 +62,9 @@ class StudioPanel {
         break;
       }
       case 'openFile': {
-        const doc = await vscode.workspace.openTextDocument(this.f(m.file));
+        const file = util.insideRoot(this.root, m.file);
+        if (!file) break;
+        const doc = await vscode.workspace.openTextDocument(file);
         await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Beside });
         break;
       }
@@ -77,7 +80,7 @@ class StudioPanel {
       if (c !== 'Overwrite') file = this.f('styles_generated.lua');
     }
     this.writeJson('.rs3/styles.json', spec);
-    fs.writeFileSync(file, generateLua(spec));
+    util.writeFileAtomic(file, generateLua(spec));
     const mod = path.basename(file, '.lua');
     this.panel.webview.postMessage({ type: 'saved', file: path.basename(file), module: mod });
     const { PreviewPanel } = require('../preview/panel');
@@ -101,7 +104,7 @@ class StudioPanel {
     const base = vscode.Uri.file(path.join(this.context.extensionPath, 'styles', 'webview'));
     const js = wv.asWebviewUri(vscode.Uri.joinPath(base, 'studio.js'));
     const css = wv.asWebviewUri(vscode.Uri.joinPath(base, 'studio.css'));
-    const nonce = Array.from({ length: 24 }, () => Math.random().toString(36)[2]).join('');
+    const nonce = util.nonce();
     return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${wv.cspSource} data:; style-src ${wv.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -111,21 +114,8 @@ class StudioPanel {
 }
 
 async function openStudio(context, uri) {
-  const { findPluginRoot } = require('../preview/panel');
-  const roots = (vscode.workspace.workspaceFolders || []).map(f => f.uri.fsPath);
-  const start = (uri && uri.fsPath) || (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri.scheme === 'file' ? vscode.window.activeTextEditor.document.uri.fsPath : undefined);
-  let root = start && findPluginRoot(start, roots);
-  if (!root) {
-    const found = await vscode.workspace.findFiles('**/plugin.json', '**/node_modules/**', 20);
-    if (found.length === 1) root = path.dirname(found[0].fsPath);
-    else if (found.length > 1) {
-      const pick = await vscode.window.showQuickPick(found.map(f => ({ label: vscode.workspace.asRelativePath(path.dirname(f.fsPath)), dir: path.dirname(f.fsPath) })), { placeHolder: 'Which plugin?' });
-      if (!pick) return;
-      root = pick.dir;
-    }
-  }
-  if (!root) { vscode.window.showWarningMessage('Open a plugin folder (with plugin.json) first.'); return; }
-  StudioPanel.open(context, root);
+  const root = await util.pickPluginRoot(uri);
+  if (root) StudioPanel.open(context, root);
 }
 
 module.exports = { openStudio };

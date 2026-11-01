@@ -4,3 +4,5 @@ tools/**
 .vscode/**
 *.vsix
 .gitignore
+test/**
+.github/**

@@ -11,10 +11,33 @@ Autocomplete and docs for writing RuneScape 3 Plugin Hub plugins in VS Code.
 - **RS3: Open Docs for Symbol Under Cursor** (also in the editor right-click menu).
 - **RS3: New Plugin…** scaffolds `plugin.json` + `main.lua`, plain or with PrettyUI.
 - **Library plugins**: list PrettyUI as a dependency and `prettyui.` gets completions, hover docs and type checking too (below).
-- **plugin.json validation** and completion (keys, permission names, URL format).
+- **plugin.json validation** and completion (keys, permission names, URL format). Other tools' `plugin.json` files are left alone.
 - **Snippets**: `rs3event`, `rs3xp`, `rs3inv`, `rs3db`, `rs3shutdown`, `rs3log`, `rs3level`, `rs3var`, `rs3cmd`.
 - **RS3: Copy a Cheat or Console Command…**: search the beta cheats and plugin console commands, fill in the arguments, and paste the result into the client console.
 - **RS3: Open UI Preview**: live preview of your plugin's UI (below).
+- **RS3: Open UI Builder**: drag and drop a UI, and the Lua is written for you (below).
+- **RS3: Deploy to Game**: copies your plugin into the client and the console commands to your clipboard.
+- **RS3: Check Plugin**: finds what the client or Jagex's review would object to, every time you save.
+- **RS3: Open Plugin Data**: browse what plugins have saved, and see their `log()` lines (below).
+- **RS3: Package for Upload**: builds the zip for Mod.io. **RS3: Open Upload Checklist** covers the rest.
+- A **getting started walkthrough**: **Help > Welcome**, or **Welcome: Open Walkthrough…** in the Command Palette.
+
+## UI Builder
+**RS3: Open UI Builder** gives you a window to drag parts onto: text, buttons, checkboxes, text boxes, dropdowns, lists, radio buttons, sliders, carousels, progress rings, rectangles, lines, images, group boxes and layers.
+- **PrettyUI or Plain, at the flick of a switch:** PrettyUI mode generates real PrettyUI components and adds dividers, spinners, colour pickers, keybinds and item slots. Plain mode uses only the client's own parts, with no library needed.
+- **Move, resize and nest** with the mouse. Parts snap to a grid and line up with each other, and everything can be undone.
+- **Pin** parts to an edge, or stretch them, so they stay right when the window changes size.
+- **Start from** a blank window, a settings form, a stats panel or a yes/no question.
+- **Window or layer:** a titled window, or a layer for the ribbon or settings window.
+- **Your code is safe:** the Builder writes `<name>.lua` as you work, and your own code goes in handlers you pass to `create()`, so regenerating never touches it.
+- **Tested as you go:** every change runs in the preview's simulated client, and problems are listed with the part they're about.
+
+The generated code follows what was found in the real client, like `<br>` for line breaks and stopping clicks reaching the game. Details: `reference/ui-builder.md`, or **?** in the Builder.
+
+## Plugin Data and logs
+**RS3: Open Plugin Data** shows everything plugins have saved with `PersistentDB`, updating as the game writes it. Filter by key or value, and copy anything out. It reads `PluginData.db` and never changes it.
+
+The client doesn't write its console to a file, so to see `log()` lines here, run **RS3: Add Log Capture**. It adds a small development-only `rs3log.lua` that copies them into the plugin's saved data, and they appear on the **Log** tab a couple of seconds later. **RS3: Check Plugin** reminds you to remove it before uploading.
 
 ## UI Preview
 Click the preview icon in the editor title bar (or run **RS3: Open UI Preview**) to see your plugin's UI on a simulated RuneScape screen, updated as you type.
@@ -50,7 +73,7 @@ Save, and the extension loads PrettyUI's definitions for that workspace: `pretty
 The extension ships only editor definitions written from PrettyUI's public docs. None of PrettyUI's code is included: the game client downloads the real library from the plugin hub. The UI preview has a **PrettyUI** switch: on, it runs PrettyUI from the copy your game client already downloaded and draws it; off, it shows the base view. It turns on by itself for plugins that depend on PrettyUI.
 
 ## How it works
-Completions, hover and diagnostics come from the **Lua** extension by sumneko (lua-language-server), which is installed automatically as a dependency. This extension ships LuaLS annotation files for the RS3 API and adds them to `Lua.workspace.library` (and sets `Lua.runtime.version` to Lua 5.4) in any workspace that contains a `plugin.json`. For other folders run **RS3: Enable Plugin API for This Workspace**. Change this with the `rs3lua.autoEnable` setting.
+Completions, hover and diagnostics come from the **Lua** extension by sumneko (lua-language-server), which is installed automatically alongside this extension. Without it you lose completions, but everything else keeps working, and **RS3: Check Setup** offers to install it. This extension ships LuaLS annotation files for the RS3 API and adds them to `Lua.workspace.library` (and sets `Lua.runtime.version` to Lua 5.4) in any workspace that contains a `plugin.json`. For other folders run **RS3: Enable Plugin API for This Workspace**. Change this with the `rs3lua.autoEnable` setting.
 
 ## Find Item (Ctrl+Alt+I)
 **RS3: Find Item…**: type part of an item name, press Enter, and it inserts `id.Obj.PRAYER_POTION_4` (or `2434 --[[ Prayer potion (4) ]]` when the config name isn't known) at your cursor. The row buttons insert the number, copy the ID, or open the wiki page.

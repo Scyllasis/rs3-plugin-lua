@@ -23,6 +23,7 @@ function loadIndex(context) {
 
 // ---------------------------------------------------------------- LuaLS wiring (see setup.js)
 const setup = require('./setup');
+const util = require('./util');
 const setLibrary = (context, folder, on) => setup.setLibrary(folder, on);
 const autoEnable = () => setup.enableFolders();
 
@@ -170,7 +171,9 @@ async function newPlugin(context) {
   if (!kind) return;
   const dir = vscode.Uri.joinPath(folder.uri, where.sub);
   const tplDir = context.asAbsolutePath(path.join('templates', kind.tpl));
-  const fill = s => s.replace(/\{\{name\}\}/g, name.trim()).replace(/\{\{slug\}\}/g, slug);
+  // the name lands inside JSON and Lua strings, so it's escaped for them (and $ stays literal)
+  const inString = s => JSON.stringify(s).slice(1, -1);
+  const fill = s => s.replace(/\{\{name\}\}/g, () => inString(name.trim())).replace(/\{\{slug\}\}/g, () => slug);
   const files = fs.readdirSync(tplDir);
   for (const f of files) {
     const target = vscode.Uri.joinPath(dir, f);
@@ -244,56 +247,46 @@ async function pickConsoleCommand(context) {
 
 // ---------------------------------------------------------------- activate
 function activate(context) {
-  setup.activate(context);
-  require('./catalog/host').activate(context);
+  util.step('setup', () => setup.activate(context));
+  util.step('catalog', () => require('./catalog/host').activate(context));
+  util.step('check', () => require('./check').activate(context));
+  util.step('deploy', () => require('./deploy').activate(context));
+  util.step('data', () => require('./data/panel').activate(context));
   loadIndex(context);
   const tree = new ApiTree(context);
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('rs3lua.explorer', tree),
-    vscode.commands.registerCommand('rs3lua.enable', async () => {
+    util.command('rs3lua.enable', async () => {
       const f = await pickFolder(); if (!f) return;
       await setLibrary(context, f, true);
       vscode.window.showInformationMessage('RS3 Plugin API enabled for ' + f.name + '.');
     }),
-    vscode.commands.registerCommand('rs3lua.disable', async () => {
+    util.command('rs3lua.disable', async () => {
       const f = await pickFolder(); if (!f) return;
       await setLibrary(context, f, false);
       vscode.window.showInformationMessage('RS3 Plugin API removed from ' + f.name + '.');
     }),
-    vscode.commands.registerCommand('rs3lua.newPlugin', () => newPlugin(context)),
-    vscode.commands.registerCommand('rs3lua.openDocs', () => openUrl(docsUrl(''))),
-    vscode.commands.registerCommand('rs3lua.docsForSymbol', () => {
+    util.command('rs3lua.newPlugin', () => newPlugin(context)),
+    util.command('rs3lua.openDocs', () => openUrl(docsUrl(''))),
+    util.command('rs3lua.docsForSymbol', () => {
       const ed = vscode.window.activeTextEditor; if (!ed) return;
       const e = findEntry(context, symbolAtCursor(ed));
       if (e && e.docs) openUrl(docsUrl(e.docs));
       else vscode.window.showInformationMessage('No RS3 API docs found for that symbol.');
     }),
-    vscode.commands.registerCommand('rs3lua.cheats', () => pickConsoleCommand(context)),
-    vscode.commands.registerCommand('rs3lua.preview', async (uri) => {
-      const { PreviewPanel, findPluginRoot } = require('./preview/panel');
-      const roots = (vscode.workspace.workspaceFolders || []).map(f => f.uri.fsPath);
-      const start = (uri && uri.fsPath) || (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document.uri.scheme === 'file'
-        ? vscode.window.activeTextEditor.document.uri.fsPath : undefined);
-      let root = start && findPluginRoot(start, roots);
-      if (!root) {
-        const found = await vscode.workspace.findFiles('**/plugin.json', '**/node_modules/**', 20);
-        if (found.length === 1) root = path.dirname(found[0].fsPath);
-        else if (found.length > 1) {
-          const pick = await vscode.window.showQuickPick(found.map(f => ({ label: vscode.workspace.asRelativePath(path.dirname(f.fsPath)), dir: path.dirname(f.fsPath) })), { placeHolder: 'Which plugin?' });
-          if (!pick) return;
-          root = pick.dir;
-        }
-      }
-      if (!root) { vscode.window.showWarningMessage('Open a plugin\'s main.lua (or a folder with plugin.json) first.'); return; }
-      await PreviewPanel.show(context, root);
+    util.command('rs3lua.cheats', () => pickConsoleCommand(context)),
+    util.command('rs3lua.preview', async (uri) => {
+      const root = await util.pickPluginRoot(uri);
+      if (root) await require('./preview/panel').PreviewPanel.show(context, root);
     }),
-    vscode.commands.registerCommand('rs3lua.newSprite', uri => require('./sprite/panel').newSprite(context, uri)),
-    vscode.commands.registerCommand('rs3lua.editSprite', uri => require('./sprite/panel').editSprite(context, uri)),
-    vscode.commands.registerCommand('rs3lua.styleStudio', uri => require('./styles/panel').openStudio(context, uri)),
-    vscode.commands.registerCommand('rs3lua.searchApi', () => searchApi(context)),
-    vscode.commands.registerCommand('rs3lua.explorer.insert', node => node && node.entry && insertEntry(node.entry)),
-    vscode.commands.registerCommand('rs3lua.explorer.copy', node => node && node.entry && vscode.env.clipboard.writeText(node.entry.full)),
-    vscode.commands.registerCommand('rs3lua.explorer.openDocs', node => {
+    util.command('rs3lua.uiBuilder', uri => require('./builder/panel').openBuilder(context, uri)),
+    util.command('rs3lua.newSprite', uri => require('./sprite/panel').newSprite(context, uri)),
+    util.command('rs3lua.editSprite', uri => require('./sprite/panel').editSprite(context, uri)),
+    util.command('rs3lua.styleStudio', uri => require('./styles/panel').openStudio(context, uri)),
+    util.command('rs3lua.searchApi', () => searchApi(context)),
+    util.command('rs3lua.explorer.insert', node => node && node.entry && insertEntry(node.entry)),
+    util.command('rs3lua.explorer.copy', node => node && node.entry && vscode.env.clipboard.writeText(node.entry.full)),
+    util.command('rs3lua.explorer.openDocs', node => {
       const rel = node && (node.entry ? node.entry.docs : node.group && node.group.docs);
       if (rel) openUrl(docsUrl(rel));
     }),
@@ -302,8 +295,8 @@ function activate(context) {
   const watcher = vscode.workspace.createFileSystemWatcher('**/plugin.json', false, true, true);
   watcher.onDidCreate(() => autoEnable(context));
   context.subscriptions.push(watcher);
-  require('./sprite/panel').trackEditors(context);
-  autoEnable(context);
+  util.step('sprites', () => require('./sprite/panel').trackEditors(context));
+  Promise.resolve(autoEnable(context)).catch(e => util.logError('autoEnable', e));
 }
 
 function deactivate() {}

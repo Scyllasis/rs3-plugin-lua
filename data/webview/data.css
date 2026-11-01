@@ -1,0 +1,26 @@
+html, body { height: 100%; margin: 0; }
+body { font: 13px var(--vscode-font-family, system-ui); color: var(--vscode-foreground, #ccc); background: var(--vscode-editor-background, #1e1e1e); overflow: hidden; }
+#app { height: 100%; display: flex; flex-direction: column; }
+button { font: inherit; color: var(--vscode-button-secondaryForeground, #ddd); background: var(--vscode-button-secondaryBackground, #3a3d41); border: 1px solid transparent; border-radius: 3px; padding: 3px 8px; cursor: pointer; }
+button:hover { background: var(--vscode-button-secondaryHoverBackground, #45494e); }
+button.on { color: var(--vscode-button-foreground, #fff); background: var(--vscode-button-background, #0e639c); }
+input, select { font: inherit; padding: 3px 5px; color: var(--vscode-input-foreground, #ddd); background: var(--vscode-input-background, #3c3c3c); border: 1px solid var(--vscode-input-border, transparent); border-radius: 2px; }
+.bar { display: flex; flex: none; align-items: center; gap: 6px; padding: 5px 8px; border-bottom: 1px solid var(--vscode-panel-border, #333); }
+.spacer { flex: 1; }
+.muted { opacity: .65; }
+.error { padding: 12px; color: var(--vscode-errorForeground, #f48771); }
+.main { flex: 1; min-height: 0; display: flex; }
+.plugins { flex: none; width: 200px; overflow-y: auto; border-right: 1px solid var(--vscode-panel-border, #333); background: var(--vscode-sideBar-background, #252526); }
+.body { flex: 1; min-width: 0; display: flex; }
+.split { flex: 1; min-width: 0; display: flex; }
+.keys { width: 46%; overflow-y: auto; border-right: 1px solid var(--vscode-panel-border, #333); }
+.value-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 8px; cursor: default; }
+.row:hover { background: var(--vscode-list-hoverBackground, #2a2d2e); }
+.row.on { color: var(--vscode-list-activeSelectionForeground, #fff); background: var(--vscode-list-activeSelectionBackground, #094771); }
+.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.value { flex: 1; min-width: 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+pre { flex: 1; min-height: 0; margin: 0; padding: 8px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: 12px var(--vscode-editor-font-family, Consolas, monospace); }
+.log-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.empty { padding: 20px; }
+p { margin: 8px; }

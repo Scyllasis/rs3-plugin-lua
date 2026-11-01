@@ -14,6 +14,7 @@ function getFactory() {
 }
 
 const RUNTIME = fs.readFileSync(path.join(__dirname, 'runtime.lua'), 'utf8');
+const MEMORY_LIMIT = 256 * 1024 * 1024; // a runaway plugin stops here instead of filling the extension host
 
 // ---- data derived once from api-index.json
 let apiData = null;
@@ -79,14 +80,20 @@ function findPreviews(files) {
 class Session {
   static async create(opts) {
     const s = new Session();
-    await s._init(opts);
+    try {
+      await s._init(opts);
+    } catch (e) {
+      s.close();
+      throw e;
+    }
     return s;
   }
   async _init({ indexPath, readFile, cfg, scene, libraries }) {
     const api = loadApiData(indexPath);
     const factory = await getFactory();
-    this.lua = await factory.createEngine({ injectObjects: false, enableProxy: false, traceAllocations: false });
+    this.lua = await factory.createEngine({ injectObjects: false, enableProxy: false, traceAllocations: true });
     const g = this.lua.global;
+    g.setMemoryMax(MEMORY_LIMIT);
     g.set('__rs3_readFile', (p) => {
       try { const r = readFile(String(p)); return r == null ? undefined : r; } catch { return undefined; }
     });
@@ -130,7 +137,8 @@ class Session {
     await this.lua.doString(`__rs3_fireEvent(${toLua(String(name))})`);
   }
   close() {
-    try { this.lua.global.close(); } catch { /* already closed */ }
+    try { if (this.lua) this.lua.global.close(); } catch { /* already closed */ }
+    this.lua = null;
   }
 }
 

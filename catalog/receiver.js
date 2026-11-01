@@ -15,12 +15,24 @@ function accept(payload) {
   return onItems(payload);
 }
 
+/**
+ * The game client sends no Origin header, and a web page's request always has one. Checking Host as
+ * well stops a page reaching this port through a DNS name that resolves to 127.0.0.1.
+ */
+function allowed(req) {
+  if (req.headers.origin) return false;
+  return /^(127\.0\.0\.1|localhost)(:\d+)?$/i.test(String(req.headers.host || ''));
+}
+
 function startReceiver() {
   if (server) { bumpTimer(); return Promise.resolve(true); }
   return new Promise(resolve => {
     server = http.createServer((req, res) => {
+      if (!allowed(req)) { res.writeHead(403, { 'Content-Type': 'text/plain' }); res.end('refused'); return; }
       if (req.method !== 'POST') { res.writeHead(200, { 'Content-Type': 'text/plain' }); res.end('RS3 item export receiver is running.'); return; }
       let body = '', size = 0;
+      req.setEncoding('utf8'); // a character split across two chunks stays whole
+      req.on('error', () => { /* the sender went away */ });
       req.on('data', d => { size += d.length; if (size > 20 * 1024 * 1024) { req.destroy(); return; } body += d; });
       req.on('end', () => {
         try {
@@ -106,9 +118,9 @@ function devPluginFolders() {
 function activate(context, itemsHandler) {
   onItems = itemsHandler;
   context.subscriptions.push(
-    vscode.commands.registerCommand('rs3lua.catalog.import', importOutput),
+    require('../util').command('rs3lua.catalog.import', importOutput),
     { dispose: stopReceiver }
   );
 }
 
-module.exports = { activate, startReceiver, consoleCommands, devPluginFolders, port };
+module.exports = { activate, startReceiver, stopReceiver, consoleCommands, devPluginFolders, port, parseConsole, allowed };

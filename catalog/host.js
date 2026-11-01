@@ -152,10 +152,10 @@ function activate(context) {
   R.activate(context, saveExport);
   const sel = { language: 'lua' };
   context.subscriptions.push(
-    vscode.commands.registerCommand('rs3lua.findItem', findItem),
-    vscode.commands.registerCommand('rs3lua.catalog.updateWiki', updateFromWiki),
-    vscode.commands.registerCommand('rs3lua.catalog.createExport', createExport),
-    vscode.commands.registerCommand('rs3lua.catalog.clear', async () => {
+    require('../util').command('rs3lua.findItem', findItem),
+    require('../util').command('rs3lua.catalog.updateWiki', updateFromWiki),
+    require('../util').command('rs3lua.catalog.createExport', createExport),
+    require('../util').command('rs3lua.catalog.clear', async () => {
       const c = await vscode.window.showWarningMessage('Delete the cached item list (wiki download and your exported items)?', { modal: true }, 'Delete');
       if (!c) return;
       for (const f of ['wiki.json', 'mine.json']) { try { fs.unlinkSync(file(f)); } catch { /* none */ } }

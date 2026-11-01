@@ -55,7 +55,7 @@ class SpritePanel {
     });
     this.panel.iconPath = vscode.Uri.file(path.join(context.extensionPath, 'media', 'icon.png'));
     this.panel.webview.html = this.html();
-    this.panel.webview.onDidReceiveMessage(m => this.onMessage(m));
+    this.panel.webview.onDidReceiveMessage(require('../util').guard('Sprite Maker', m => this.onMessage(m)));
     this.panel.onDidDispose(() => this.onDispose());
     this.updateTitle();
   }
@@ -121,7 +121,7 @@ class SpritePanel {
     const base = vscode.Uri.file(path.join(this.context.extensionPath, 'sprite', 'webview'));
     const js = wv.asWebviewUri(vscode.Uri.joinPath(base, 'sprite.js'));
     const css = wv.asWebviewUri(vscode.Uri.joinPath(base, 'sprite.css'));
-    const nonce = Array.from({ length: 24 }, () => Math.random().toString(36)[2]).join('');
+    const nonce = require('../util').nonce();
     return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${wv.cspSource} data: blob:; style-src ${wv.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
 <meta name="viewport" content="width=device-width,initial-scale=1">

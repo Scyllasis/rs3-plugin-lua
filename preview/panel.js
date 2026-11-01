@@ -6,6 +6,7 @@ const fs = require('fs');
 const { Session, findPreviews } = require('./engine');
 const Libraries = require('./libraries');
 const { planMove } = require('./move');
+const util = require('../util');
 
 const RESOLUTIONS = ['1280x720', '1366x768', '1600x900', '1920x1080', '2560x1440', '3440x1440', '3840x2160'];
 
@@ -50,10 +51,9 @@ class PreviewPanel {
     this.disposables = [];
     panel.webview.html = this.html();
     panel.onDidDispose(() => this.dispose(), null, this.disposables);
-    panel.webview.onDidReceiveMessage(m => this.onMessage(m), null, this.disposables);
+    panel.webview.onDidReceiveMessage(util.guard('UI Preview', m => this.onMessage(m)), null, this.disposables);
 
-    let timer;
-    const later = () => { clearTimeout(timer); timer = setTimeout(() => this.rebuild(), 350); };
+    const later = () => { clearTimeout(this.timer); this.timer = setTimeout(() => this.rebuild(), 350); };
     this.disposables.push(
       vscode.workspace.onDidChangeTextDocument(e => { if (this.owns(e.document.uri) && /\.(lua|json)$/i.test(e.document.uri.fsPath)) later(); }),
       vscode.workspace.onDidSaveTextDocument(d => { if (this.owns(d.uri)) later(); }),
@@ -83,8 +83,7 @@ class PreviewPanel {
 
   watchResources() {
     if (this.resWatcher) this.resWatcher.dispose();
-    let timer;
-    const later = () => { clearTimeout(timer); timer = setTimeout(() => this.rebuild(), 300); };
+    const later = () => { clearTimeout(this.timer); this.timer = setTimeout(() => this.rebuild(), 300); };
     this.resWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.root, 'resources/**/*.png'));
     this.resWatcher.onDidCreate(later); this.resWatcher.onDidChange(later); this.resWatcher.onDidDelete(later);
   }
@@ -117,14 +116,13 @@ class PreviewPanel {
   }
   owns(uri) { return uri.scheme === 'file' && this.root && (uri.fsPath + path.sep).startsWith(this.root + path.sep); }
   rel(f) { return path.relative(this.root, f).split(path.sep).join('/'); }
-  post(m) { this.panel.webview.postMessage(m); }
+  post(m) { if (!this.disposed) this.panel.webview.postMessage(m); }
 
   readFile(rel) {
     const lib = String(rel).match(/^__lib\/([^/]+)\/(.+)$/);
     if (lib) { const v = this.libFiles && this.libFiles[lib[1]] && this.libFiles[lib[1]][lib[2]]; return v == null ? null : v; }
-    const clean = path.posix.normalize(String(rel).replace(/\\/g, '/'));
-    if (clean.startsWith('..') || path.isAbsolute(clean)) return null;
-    const abs = path.join(this.root, clean);
+    const abs = util.insideRoot(this.root, String(rel).replace(/\\/g, '/'));
+    if (!abs) return null;
     const open = vscode.workspace.textDocuments.find(d => d.uri.scheme === 'file' && d.uri.fsPath === abs);
     if (open) return open.getText();
     try { return fs.readFileSync(abs, 'utf8'); } catch { return null; }
@@ -176,14 +174,22 @@ class PreviewPanel {
     return list;
   }
 
-  rebuild() {
-    this.queue = this.queue.then(() => this._rebuild()).catch(e => {
+  /** Runs work in order. A failure is shown in the panel and doesn't stop what's queued after it. */
+  enqueue(work) {
+    this.queue = this.queue.then(work).catch(e => {
+      util.logError('UI Preview', e);
       this.post({ type: 'fatal', msg: String(e && e.stack || e) });
     });
     return this.queue;
   }
 
+  rebuild() {
+    if (this.disposed) return this.queue;
+    return this.enqueue(() => this._rebuild());
+  }
+
   async _rebuild() {
+    if (this.disposed) return;
     if (!this.root) { this.post({ type: 'fatal', msg: 'Open a plugin folder (one with plugin.json or main.lua).' }); return; }
     const files = this.luaFiles();
     if (!('main.lua' in files)) {
@@ -199,11 +205,13 @@ class PreviewPanel {
     const cfg = this.cfg();
     if (scene.kind === 'content') scene.rect = cfg.contentRect;
     if (scene.kind === 'settings') scene.rect = cfg.settingsRect;
-    this.session = await Session.create({
+    const session = await Session.create({
       indexPath: path.join(this.context.extensionPath, 'api-index.json'),
       readFile: r => this.readFile(r),
       cfg, scene, libraries: this.libraryLoad()
     });
+    if (this.disposed) { session.close(); return; } // the panel closed while this was running
+    this.session = session;
     await this.send(previews, cfg);
   }
 
@@ -303,10 +311,10 @@ class PreviewPanel {
         break;
       }
       case 'fireHook':
-        this.queue = this.queue.then(async () => { if (this.session) { await this.session.fireHook(m.id, m.hook); await this.send(); } });
+        this.enqueue(async () => { if (this.session) { await this.session.fireHook(m.id, m.hook); await this.send(); } });
         break;
       case 'fireEvent':
-        this.queue = this.queue.then(async () => { if (this.session) { await this.session.fireEvent(m.name); await this.send(); } });
+        this.enqueue(async () => { if (this.session) { await this.session.fireEvent(m.name); await this.send(); } });
         break;
       case 'reveal': await this.reveal(m.file, m.line, m.focus); break;
       case 'moveComp': await this.moveComp(Number(m.id), Number(m.dx) || 0, Number(m.dy) || 0); break;
@@ -331,11 +339,12 @@ class PreviewPanel {
     const reply = (ok, msg) => this.post({ type: 'moveResult', ok, msg });
     const c = this.lastData && this.lastData.comps.find(k => k.id === id);
     const at = c && c.posAt;
-    if (!at || !at.file || !at.line || at.file.startsWith('__lib/')) {
+    const target = at && at.file && util.insideRoot(this.root, at.file);
+    if (!at || !target || !at.line || at.file.startsWith('__lib/')) {
       reply(false, c && c.posSet ? 'Its position is set somewhere the preview cannot edit.' : 'Its position is never set in your code (SetPos, or x/y options), so there is nothing to change.');
       return;
     }
-    const uri = vscode.Uri.file(path.join(this.root, at.file));
+    const uri = vscode.Uri.file(target);
     let doc;
     try { doc = await vscode.workspace.openTextDocument(uri); } catch { reply(false, `Couldn't open ${at.file}.`); return; }
     const plan = planMove(doc.getText(), at.line, Math.round(dx), Math.round(dy));
@@ -348,8 +357,9 @@ class PreviewPanel {
   }
 
   async reveal(file, line, focus) {
-    if (!file || !line) return;
-    const uri = vscode.Uri.file(path.join(this.root, file));
+    const abs = line && util.insideRoot(this.root, file);
+    if (!abs) return;
+    const uri = vscode.Uri.file(abs);
     const doc = await vscode.workspace.openTextDocument(uri);
     const pos = new vscode.Position(Math.max(0, line - 1), 0);
     const visible = vscode.window.visibleTextEditors.find(e => e.document.uri.fsPath === uri.fsPath);
@@ -363,7 +373,7 @@ class PreviewPanel {
     const base = vscode.Uri.file(path.join(this.context.extensionPath, 'preview', 'webview'));
     const js = wv.asWebviewUri(vscode.Uri.joinPath(base, 'preview.js'));
     const css = wv.asWebviewUri(vscode.Uri.joinPath(base, 'preview.css'));
-    const nonce = Array.from({ length: 24 }, () => Math.random().toString(36)[2]).join('');
+    const nonce = util.nonce();
     return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${wv.cspSource} data:; style-src ${wv.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -372,6 +382,8 @@ class PreviewPanel {
   }
 
   dispose() {
+    this.disposed = true;
+    clearTimeout(this.timer);
     PreviewPanel.current = undefined;
     if (this.session) this.session.close();
     this.diags.dispose();
@@ -382,7 +394,9 @@ class PreviewPanel {
 
 /** Find the plugin folder for a file: nearest parent with plugin.json, else with main.lua. */
 function findPluginRoot(startPath, workspaceRoots) {
-  let dir = startPath && fs.existsSync(startPath) && fs.statSync(startPath).isDirectory() ? startPath : startPath && path.dirname(startPath);
+  let isDir = false;
+  try { isDir = !!startPath && fs.statSync(startPath).isDirectory(); } catch { /* it may not exist yet */ }
+  let dir = isDir ? startPath : startPath && path.dirname(startPath);
   let mainOnly;
   while (dir) {
     if (fs.existsSync(path.join(dir, 'plugin.json'))) return dir;

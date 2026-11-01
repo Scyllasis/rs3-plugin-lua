@@ -701,6 +701,11 @@ local function guarded(fn, ...)
     return err
   end, ...))
   debug.sethook()
+  -- Lua skips the error handler when memory runs out, so this one is reported here
+  if res[1] == false and tostring(res[2]):find("not enough memory", 1, true) then
+    collectgarbage()
+    addLog("error", "stopped: plugin code used too much memory")
+  end
   return table.unpack(res, 1, res.n)
 end
 __rs3_guarded = guarded
