@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Holds a series of entries (text labels or icon sprites) and shows one at a time, switched with left/right buttons.
 ---

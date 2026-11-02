@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A world coordinate in Grid units (tiles). All properties are read-only.
 --- Packed format: `(level << 28) | (x << 14) | z`.

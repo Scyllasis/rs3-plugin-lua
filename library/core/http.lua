@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- An HTTP request. Requires the `httpAccess` permission (check with
 --- `Plugin.HasPermission(PluginPermissions.httpAccess)`); base URLs come from the manifest `urls` via `Plugin.urls`.

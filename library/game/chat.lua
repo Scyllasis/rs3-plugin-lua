@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Chat window access. Requires the `chatAccess` permission in the plugin manifest.
 ---

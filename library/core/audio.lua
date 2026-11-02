@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Audio playback for plugins (built-in sounds or Ogg Vorbis plugin resources).
 ---

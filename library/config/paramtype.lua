@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A param config: a typed key that other configs (Obj, NPC, Loc, Struct...) can hold values for. Proxy usertype; no constructor.
 --- Look up via `config.Param.NAME` or `config.Param.FromID(id)`.

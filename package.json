@@ -56,7 +56,7 @@
       },
       {
         "command": "rs3lua.openDocs",
-        "title": "RS3: Open API Docs",
+        "title": "Open API Docs",
         "category": "RS3",
         "icon": "$(book)"
       },
@@ -67,7 +67,7 @@
       },
       {
         "command": "rs3lua.searchApi",
-        "title": "RS3: Search API…",
+        "title": "Search API…",
         "category": "RS3",
         "icon": "$(search)"
       },
@@ -88,19 +88,19 @@
       },
       {
         "command": "rs3lua.cheats",
-        "title": "RS3: Copy a Cheat or Console Command…",
+        "title": "Copy a Cheat or Console Command…",
         "category": "RS3",
         "icon": "$(terminal)"
       },
       {
         "command": "rs3lua.preview",
-        "title": "RS3: Open UI Preview",
+        "title": "Open UI Preview",
         "category": "RS3",
         "icon": "$(open-preview)"
       },
       {
         "command": "rs3lua.newSprite",
-        "title": "RS3: New Sprite…",
+        "title": "New Sprite…",
         "category": "RS3",
         "icon": "$(paintcan)"
       },
@@ -112,19 +112,19 @@
       },
       {
         "command": "rs3lua.styleStudio",
-        "title": "RS3: Open Style Studio",
+        "title": "Open Style Studio",
         "category": "RS3",
         "icon": "$(symbol-color)"
       },
       {
         "command": "rs3lua.checkSetup",
-        "title": "RS3: Check Setup (fix missing completions)",
+        "title": "Check Setup (fix missing completions)",
         "category": "RS3",
         "icon": "$(pulse)"
       },
       {
         "command": "rs3lua.findItem",
-        "title": "RS3: Find Item…",
+        "title": "Find Item…",
         "category": "RS3",
         "icon": "$(search-fuzzy)"
       },
@@ -150,37 +150,44 @@
       },
       {
         "command": "rs3lua.uiBuilder",
-        "title": "RS3: Open UI Builder",
+        "title": "Open UI Builder",
+        "category": "RS3",
         "icon": "$(layout)"
       },
       {
         "command": "rs3lua.deploy",
-        "title": "RS3: Deploy to Game",
+        "title": "Deploy to Game",
+        "category": "RS3",
         "icon": "$(rocket)"
       },
       {
         "command": "rs3lua.checkPlugin",
-        "title": "RS3: Check Plugin",
+        "title": "Check Plugin",
+        "category": "RS3",
         "icon": "$(checklist)"
       },
       {
         "command": "rs3lua.package",
-        "title": "RS3: Package for Upload",
+        "title": "Package for Upload",
+        "category": "RS3",
         "icon": "$(package)"
       },
       {
         "command": "rs3lua.submissionChecklist",
-        "title": "RS3: Open Upload Checklist",
+        "title": "Open Upload Checklist",
+        "category": "RS3",
         "icon": "$(checklist)"
       },
       {
         "command": "rs3lua.pluginData",
-        "title": "RS3: Open Plugin Data",
+        "title": "Open Plugin Data",
+        "category": "RS3",
         "icon": "$(database)"
       },
       {
         "command": "rs3lua.addLogCapture",
-        "title": "RS3: Add Log Capture",
+        "title": "Add Log Capture",
+        "category": "RS3",
         "icon": "$(output)"
       }
     ],
@@ -204,64 +211,79 @@
     "menus": {
       "view/title": [
         {
-          "command": "rs3lua.findItem",
+          "command": "rs3lua.searchApi",
           "when": "view == rs3lua.explorer",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "rs3lua.preview",
           "when": "view == rs3lua.explorer",
-          "group": "navigation"
-        },
-        {
-          "command": "rs3lua.checkPlugin",
-          "when": "view == rs3lua.explorer",
-          "group": "navigation"
-        },
-        {
-          "command": "rs3lua.pluginData",
-          "when": "view == rs3lua.explorer",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "rs3lua.deploy",
           "when": "view == rs3lua.explorer",
-          "group": "navigation"
+          "group": "navigation@3"
         },
         {
           "command": "rs3lua.uiBuilder",
           "when": "view == rs3lua.explorer",
-          "group": "navigation"
+          "group": "1_build@1"
         },
         {
           "command": "rs3lua.newSprite",
           "when": "view == rs3lua.explorer",
-          "group": "navigation"
+          "group": "1_build@2"
         },
         {
           "command": "rs3lua.styleStudio",
           "when": "view == rs3lua.explorer",
-          "group": "navigation"
+          "group": "1_build@3"
         },
         {
-          "command": "rs3lua.searchApi",
+          "command": "rs3lua.checkPlugin",
           "when": "view == rs3lua.explorer",
-          "group": "navigation"
+          "group": "2_test@1"
         },
         {
-          "command": "rs3lua.openDocs",
+          "command": "rs3lua.pluginData",
           "when": "view == rs3lua.explorer",
-          "group": "navigation"
+          "group": "2_test@2"
+        },
+        {
+          "command": "rs3lua.addLogCapture",
+          "when": "view == rs3lua.explorer",
+          "group": "2_test@3"
         },
         {
           "command": "rs3lua.cheats",
           "when": "view == rs3lua.explorer",
-          "group": "navigation"
+          "group": "2_test@4"
+        },
+        {
+          "command": "rs3lua.package",
+          "when": "view == rs3lua.explorer",
+          "group": "3_upload@1"
+        },
+        {
+          "command": "rs3lua.submissionChecklist",
+          "when": "view == rs3lua.explorer",
+          "group": "3_upload@2"
+        },
+        {
+          "command": "rs3lua.findItem",
+          "when": "view == rs3lua.explorer",
+          "group": "4_reference@1"
+        },
+        {
+          "command": "rs3lua.openDocs",
+          "when": "view == rs3lua.explorer",
+          "group": "4_reference@2"
         },
         {
           "command": "rs3lua.checkSetup",
           "when": "view == rs3lua.explorer",
-          "group": "navigation"
+          "group": "4_reference@3"
         }
       ],
       "view/item/context": [

@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Collection of ui.Model components rendered through switchable cameras.
 --- Only ui.Model children are allowed.

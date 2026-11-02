@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A key/value mapping config (input value -> output value). Proxy usertype; no constructor.
 --- Look up via `config.Enum.NAME` or `config.Enum.FromID(id)`.

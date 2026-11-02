@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A hitmark config. Proxy usertype; no constructor. Docs list is incomplete (TODO).
 --- Look up via `config.Hitmark.NAME` or `config.Hitmark.FromID(id)`.

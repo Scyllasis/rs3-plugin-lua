@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 -- Access tables for config types: `config.*`, `id.*`, `var.*`.
 -- Sources: https://developer.runescape.com/rs/tutorial/3info.html and each config page.

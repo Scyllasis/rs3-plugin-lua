@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- UI namespace: create new interfaces and modify existing ones (colours, styles, contents).
 --- Colours/tints default to white (`Vector4.new(1.0)` / `0xFFFFFFFF`); alpha defaults to 1.0.

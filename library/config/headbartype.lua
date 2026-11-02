@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A headbar config (bars drawn above entities). Proxy usertype; no constructor. Docs list is incomplete (TODO).
 --- Look up via `config.Headbar.NAME` or `config.Headbar.FromID(id)`.

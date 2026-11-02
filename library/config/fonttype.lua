@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A game font, with text measuring/splitting helpers. Proxy usertype; no constructor.
 --- Look up via `config.Font.NAME` or `config.Font.FromID(id)`.

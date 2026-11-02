@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Decorative component that renders a 3D model (plain model, NPC/player, chathead, object).
 ---

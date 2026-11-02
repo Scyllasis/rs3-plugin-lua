@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Animation set (Seqs) used by entities for common actions such as walking and running. Proxy usertype; no constructor.
 --- Look up via `config.BaseAnimSet.NAME` or `config.BaseAnimSet.FromID(id)`.

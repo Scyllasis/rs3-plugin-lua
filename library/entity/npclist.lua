@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Filter keys for `NPCList.Filter`. All tests present must pass.
 ---@class NPCListFilter

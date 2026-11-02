@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A self-contained bundle of components, loaded on demand. Only one top-level interface is loaded at a time.
 ---

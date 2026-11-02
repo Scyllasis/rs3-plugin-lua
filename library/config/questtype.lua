@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 -- NOTE: The docs name both the config usertype and the quest-category enum `QuestType`.
 -- The class keeps the name `QuestType`; the enum table is declared as `QuestTypeEnum`

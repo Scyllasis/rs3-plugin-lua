@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- An engine-level client option (graphics, audio, accessibility...). Does not cover the in-game gameplay settings interface.
 ---

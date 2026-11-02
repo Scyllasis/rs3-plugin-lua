@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A stylesheet: integer property values keyed by `ui.StyleValue` keys, inheriting from a parent.
 --- Index with `sheet[property]` to get (nil if missing) or set a value.

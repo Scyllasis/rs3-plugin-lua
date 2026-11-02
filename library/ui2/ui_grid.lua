@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Divides an area into same-size cells, one child per cell, placed left to right, top to bottom.
 ---

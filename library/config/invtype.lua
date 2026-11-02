@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- An inventory config (e.g. bank, shop stock). Proxy usertype; no constructor.
 --- Look up via `config.Inv.NAME` or `config.Inv.FromID(id)`.

@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Shared base for Vector2, Vector3 and Vector4 (2, 3 or 4 float values).
 ---

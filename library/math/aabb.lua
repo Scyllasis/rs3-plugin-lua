@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Corner of an AABB. X- Left / X+ Right, Y- Bottom / Y+ Top, Z- Near / Z+ Far.
 ---

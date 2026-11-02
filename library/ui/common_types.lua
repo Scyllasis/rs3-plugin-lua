@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A position: pixel offset plus parent- and self-relative percentages.
 --- Resolved = offset + parentPc * parentSize + selfPc * selfSize.
@@ -97,7 +98,7 @@ function TextData:GetConfigCopy() end
 ---
 --- [Docs](https://developer.runescape.com/rs/ui/common_types.html)
 ---@class ui.SpriteData : ui.SpriteDataConfig
----@field sprite integer|RuntimeSprite Sprite to draw. -- unverified: docs type it Int but describe it as a RuntimeSprite
+---@field sprite integer|RuntimeSprite|PluginImageResource Sprite to draw: a built-in ID, a runtime sprite, or an image from `Plugin.resources`.
 ---@field spriteID integer Built-in sprite ID.
 ---@field runtimeSprite RuntimeSprite? Current runtime sprite, or nil.
 local SpriteData = {}

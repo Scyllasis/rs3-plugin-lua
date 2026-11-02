@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Linear interpolation between two values. `t` must be in 0..1 for a valid result.
 ---

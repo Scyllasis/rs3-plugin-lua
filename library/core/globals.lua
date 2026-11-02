@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 -- Bare global functions from Core (core/index.html), String Utils (core/string.html)
 -- and the tutorials. `print` is the standard Lua builtin (the client prints to the

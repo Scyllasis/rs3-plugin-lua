@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A struct config: a bag of param values. Proxy usertype; no constructor.
 --- Look up via `config.Struct.NAME` or `config.Struct.FromID(id)`.

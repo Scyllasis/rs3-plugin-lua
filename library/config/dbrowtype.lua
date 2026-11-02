@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A database row; columns hold zero or more values. Missing values fall back to the parent DBTable defaults.
 --- Proxy usertype; no constructor. Look up via `config.DBRow.NAME` or `config.DBRow.FromID(id)`.

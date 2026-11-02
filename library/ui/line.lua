@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Decorative line spanning the component's bounds (diagonal if both dimensions > 1).
 ---

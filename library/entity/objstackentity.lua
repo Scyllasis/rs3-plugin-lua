@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A stack of objects (ground items) on a tile. No constructor; obtain via `ObjStackList`.
 --- Check `isValid` before reading properties.

@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A spot animation (graphical effect) config, used to construct SpotAnimEntity. Proxy usertype; no constructor. Docs list is incomplete (TODO).
 --- Look up via `config.SpotAnim.NAME` or `config.SpotAnim.FromID(id)`.

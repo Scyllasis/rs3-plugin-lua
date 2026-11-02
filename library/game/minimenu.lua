@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- The right-click MiniMenu. Entries can be added or reordered during MiniMenu events.
 ---

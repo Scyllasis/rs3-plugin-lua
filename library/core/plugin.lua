@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Permissions a plugin may request in plugin.json (`requiredPermissions` / `optionalPermissions`).
 ---
@@ -56,12 +57,19 @@ function PluginResource:Unload() end
 --- [Docs](https://developer.runescape.com/rs/core/plugin.html)
 ---@class PluginAudioResource : PluginResource
 
+--- A file or folder under `resources`. The game gives a PNG or OGG its own type; these definitions can't tell
+--- which is which from the name, so one entry works anywhere an image, a sound or a folder is expected.
+---
+--- [Docs](https://developer.runescape.com/rs/core/plugin.html)
+---@class PluginResourceEntry : PluginImageResource, PluginAudioResource
+---@field [string] PluginResourceEntry A file or subfolder inside this folder.
+
 --- Properties and resources of the current plugin.
 ---
 --- [Docs](https://developer.runescape.com/rs/core/plugin.html)
 ---@class PluginAPI
 ---@field urls table<string, PluginURL> URLs from plugin.json `urls`, e.g. `Plugin.urls.wiki`.
----@field resources table<string, PluginResource|table> Files in the `resources` folder keyed by filename (no extension); subfolders become sub-tables, e.g. `Plugin.resources.images.menu.background`.
+---@field resources table<string, PluginResourceEntry> Files in the `resources` folder keyed by filename (no extension); subfolders become sub-tables, e.g. `Plugin.resources.images.menu.background`.
 Plugin = {}
 
 --- Whether the user granted the permission to this plugin. Use for optional permissions.

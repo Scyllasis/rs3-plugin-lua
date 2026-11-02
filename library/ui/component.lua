@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 -- unverified: x/y "relative to the parent" is inferred from library plugins tested in-game (PrettyUI adds
 -- root.x + child.x to place overlays); the docs only say "resolved".

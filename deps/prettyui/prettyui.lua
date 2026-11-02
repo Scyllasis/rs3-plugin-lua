@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 -- PrettyUI 1.2.0 (plugin hub ID 6398181), a UI library plugin by J3. Docs: https://prettyui.j3.gg/
 -- Editor definitions only: they are loaded when plugin.json lists "prettyui" as a dependency.

@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- An NPC config (static data such as name and size). Proxy usertype; no constructor.
 --- Look up via `config.NPC.NAME` or `config.NPC.FromID(id)`.

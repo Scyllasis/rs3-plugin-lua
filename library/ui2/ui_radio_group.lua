@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- A set of options shown as toggleable buttons, with configurable min/max selection counts. Fires ONSELECTIONCHANGED.
 ---

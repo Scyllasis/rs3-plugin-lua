@@ -215,3 +215,31 @@ test('closing a session twice is harmless', async () => {
   s.close();
   s.close();
 });
+
+test('replacing an API function is not called a duplicate, in any definition file', () => {
+  const walk = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : e.name.endsWith('.lua') ? [path.join(d, e.name)] : []);
+  const root = path.join(__dirname, '..');
+  const files = [...walk(path.join(root, 'library')), ...walk(path.join(root, 'deps'))];
+  assert.ok(files.length > 50);
+  for (const f of files) assert.match(fs.readFileSync(f, 'utf8'), /^---@meta\r?\n---@diagnostic disable: duplicate-set-field\b/, f);
+});
+
+test('an image from Plugin.resources is a valid sprite', () => {
+  const lib = f => fs.readFileSync(path.join(__dirname, '..', 'library', f), 'utf8');
+  assert.match(lib('ui/common_types.lua'), /---@field sprite [^ ]*\bPluginImageResource\b/);
+  const plugin = lib('core/plugin.lua');
+  assert.match(plugin, /---@class PluginResourceEntry : PluginImageResource, PluginAudioResource/);
+  assert.match(plugin, /---@field resources table<string, PluginResourceEntry>/);
+  assert.doesNotMatch(plugin, /PluginResource\|table/, 'a union with table can\'t be assigned to a sprite');
+});
+
+test('the sidebar header stays uncrowded, and every action in it is a real command', () => {
+  const { contributes } = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  const items = contributes.menus['view/title'];
+  assert.ok(items.filter(i => /^navigation/.test(i.group)).length <= 3);
+  const known = new Set(contributes.commands.map(c => c.command));
+  for (const i of items) assert.ok(known.has(i.command), i.command);
+  assert.equal(new Set(items.map(i => i.command)).size, items.length);
+  // the palette still has to say RS3, with or without a category
+  for (const c of contributes.commands.filter(x => !x.command.startsWith('rs3lua.explorer.'))) assert.ok(c.category === 'RS3' || c.title.startsWith('RS3: '), c.command);
+});

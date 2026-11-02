@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- An active NPC in the game world. Proxy usertype: safe to copy and store, not usable with
 --- persistent storage. No constructor; obtain via `NPCList`. Check `isValid` before reading properties.

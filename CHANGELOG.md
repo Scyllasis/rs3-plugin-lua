@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+### Changed
+- The RS3 sidebar header keeps three icons (Search API, UI Preview, Deploy). Everything else moved to its **...** menu, grouped and named, with Package for Upload, Upload Checklist and Add Log Capture added.
+### Fixed
+- `.sprite = Plugin.resources.name`, the way the docs write it, no longer shows "Cannot assign". Files and folders under `Plugin.resources` now type-check wherever an image, a sound or a folder is expected.
+- Replacing an API function, as `rs3preview.lua` does, no longer shows "Duplicate field". Real duplicates in your own code are still flagged.
+
 ## 0.8.0 — 2026-10-31
 ### Added
 - **UI Builder** (**RS3: Open UI Builder**): drag parts onto a window to make a UI. Move, resize, nest, pin, line up, reorder, undo, copy and paste, with snapping and smart guides. Saves a design and a Lua module as you work, and your code stays in handlers so regenerating never touches it. Every change is test-run in the preview's mock client.

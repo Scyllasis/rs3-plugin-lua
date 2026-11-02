@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Mouse polling. Positions are relative to the top-left of the game window and only update while the mouse is inside it.
 ---

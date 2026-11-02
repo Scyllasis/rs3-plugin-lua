@@ -1,4 +1,5 @@
 ---@meta
+---@diagnostic disable: duplicate-set-field -- plugins may replace API functions, as rs3preview.lua does
 
 --- Decorative component for immediate-style drawing of lines, shapes, sprites and text.
 --- Colour overloads accept hex RGBA (integer) or Vector4.
