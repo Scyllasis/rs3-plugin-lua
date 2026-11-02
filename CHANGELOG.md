@@ -1,13 +1,6 @@
 # Changelog
 
-## Unreleased
-### Changed
-- The RS3 sidebar header keeps three icons (Search API, UI Preview, Deploy). Everything else moved to its **...** menu, grouped and named, with Package for Upload, Upload Checklist and Add Log Capture added.
-### Fixed
-- `.sprite = Plugin.resources.name`, the way the docs write it, no longer shows "Cannot assign". Files and folders under `Plugin.resources` now type-check wherever an image, a sound or a folder is expected.
-- Replacing an API function, as `rs3preview.lua` does, no longer shows "Duplicate field". Real duplicates in your own code are still flagged.
-
-## 0.8.0 — 2026-10-31
+## 0.8.0 — 2026-11-01
 ### Added
 - **UI Builder** (**RS3: Open UI Builder**): drag parts onto a window to make a UI. Move, resize, nest, pin, line up, reorder, undo, copy and paste, with snapping and smart guides. Saves a design and a Lua module as you work, and your code stays in handlers so regenerating never touches it. Every change is test-run in the preview's mock client.
 - **A PrettyUI / Plain switch** in the UI Builder. PrettyUI mode generates real PrettyUI components (FancyButton, ComboBox, Slider and so on) and adds Divider, Spinner, Colour picker, Keybind and Item slot. Plain mode uses only the client's own parts, with no library. Switch at any time: parts keep their place and settings.
@@ -19,7 +12,12 @@
 - A **getting started walkthrough**.
 - Automated tests: `npm test`, `npm run test:browser` (drives the builder with a real mouse in Edge or Chrome) and `npm run test:smoke` (runs the extension in real VS Code).
 
+### Changed
+- The RS3 sidebar header keeps three icons (Search API, UI Preview, Deploy). Everything else moved to its **...** menu, grouped and named, with Package for Upload, Upload Checklist and Add Log Capture added.
+
 ### Fixed
+- `.sprite = Plugin.resources.name`, the way the docs write it, no longer shows "Cannot assign". Files and folders under `Plugin.resources` now type-check wherever an image, a sound or a folder is expected.
+- Replacing an API function, as `rs3preview.lua` does, no longer shows "Duplicate field". Real duplicates in your own code are still flagged.
 - **New plugins could fail to load.** The plain template wrote `"requiredDependencies": []`, and the beta client refuses arrays there ("unexpected json Array, expected a json Object"). Check Plugin flags existing plugins with this, though the docs still show arrays.
 - A plugin name containing a quote or `$` corrupted the new `plugin.json` and `main.lua`.
 - Any `plugin.json` turned the extension on and changed that workspace's settings, including ones from other tools. It now needs to look like an RS3 plugin, and schema errors no longer appear on `.claude-plugin/plugin.json`.

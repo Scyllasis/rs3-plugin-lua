@@ -1,12 +1,42 @@
 # RS3 Plugin API (Lua)
 
-Autocomplete and docs for writing RuneScape 3 Plugin Hub plugins in VS Code.
+Everything for writing RuneScape 3 Plugin Hub plugins in VS Code: autocomplete and docs for the whole API, a live UI preview, a drag and drop UI builder, plugin checks, one click deploy, and a viewer for saved data and logs.
+
+![UI Builder](docs/screenshots/ui-builder.png)
+
+## Install
+1. Download `rs3-plugin-lua-0.8.0.vsix` from the [latest release](https://github.com/Scyllasis/rs3-plugin-lua/releases/latest).
+2. In VS Code, press `Ctrl+Shift+P` and run **Extensions: Install from VSIX...**, then pick the file. The Lua extension (sumneko.lua) installs with it.
+3. Open your plugin folder, or run **RS3: New Plugin…** to start one. Click the RS3 icon in the activity bar to get going.
+
+**Testing status:** this is early. It's built and tested on Windows with the RS3 beta client. UI made with the UI Builder has only been run in the simulated client so far, not in the real game, and log capture's timing is unproven in game. Problems and ideas are welcome in [Issues](https://github.com/Scyllasis/rs3-plugin-lua/issues).
+
+## Screenshots
+**Typos and Check Plugin findings, with the line each one is on**
+
+![Typos and Check Plugin findings, with the line each one is on](docs/screenshots/check-plugin.png)
+
+**UI Preview: your real code on a simulated RS screen**
+
+![UI Preview: your real code on a simulated RS screen](docs/screenshots/ui-preview.png)
+
+**Completions for the whole API**
+
+![Completions for the whole API](docs/screenshots/completions.png)
+
+**Hover docs**
+
+![Hover docs](docs/screenshots/hover-docs.png)
+
+**Sprite Maker, with the RS palette and the Lua to use it**
+
+![Sprite Maker, with the RS palette and the Lua to use it](docs/screenshots/sprite-maker.png)
 
 ## What you get
 - **Completions** for every documented global, function, method, property, event and enum: type `Event.`, `Player.`, `ui.`, `SkillType.`, `e.` inside an event handler, and so on.
 - **Hover docs and signature help** with a link to the matching page on developer.runescape.com.
 - **Type checking**: typos like `Player.GetLevelGamplay` or `e.nope` on an event payload are underlined.
-- **API Explorer** (RS3 icon in the activity bar): browse everything by area, hover for docs, click the inline buttons to insert at cursor or open the docs page.
+- **RS3 sidebar** (RS3 icon in the activity bar): the header has Search API, UI Preview and Deploy, and its **...** menu has every other tool. Below that, the **API Explorer**: browse everything by area, hover for docs, click the inline buttons to insert at cursor or open the docs page.
 - **RS3: Search API…** (`Ctrl+Shift+P`): fuzzy-search all ~2,700 API members; Enter inserts it.
 - **RS3: Open Docs for Symbol Under Cursor** (also in the editor right-click menu).
 - **RS3: New Plugin…** scaffolds `plugin.json` + `main.lua`, plain or with PrettyUI.
