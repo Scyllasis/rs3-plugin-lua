@@ -94,7 +94,8 @@ async function main() {
     const p = new Page(ws);
     await p.send('Page.enable');
     await p.send('Runtime.enable');
-    await p.wait(300);
+    // a message sent before the page says it's ready is lost, and slow machines take seconds to get there
+    for (let i = 0; i < 300 && !(await p.eval('window.__sent && window.__sent.some(m => m.type === "ready")')); i += 1) await p.wait(100);
     const start = L.blank('test', 'groupbox');
     start.host.w = 480; start.host.h = 360;
     await p.eval(`window.postMessage({ type: 'init', design: ${JSON.stringify(start)}, notes: [], resources: [], hasPrettyUI: true, hasManifest: true }, '*')`);

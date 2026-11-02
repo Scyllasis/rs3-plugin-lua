@@ -44,7 +44,9 @@ const DATA = { type: 'data', file: 'x', read: '12:00', db: 'RuneScape-BETA', dbs
     const send = (method, params) => new Promise(r => { seq += 1; wait.set(seq, r); ws.send(JSON.stringify({ id: seq, method, params })); });
     const ev = async expression => { const r = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }); if (r.result.exceptionDetails) throw new Error(r.result.exceptionDetails.exception.description); return r.result.result.value; };
     const sleep = ms => new Promise(r => setTimeout(r, ms));
-    await send('Runtime.enable'); await send('Page.enable'); await sleep(300);
+    await send('Runtime.enable'); await send('Page.enable');
+    // a message sent before the page says it's ready is lost, and slow machines take seconds to get there
+    for (let i = 0; i < 300 && !(await ev('window.__sent && window.__sent.some(m => m.type === "ready")')); i += 1) await sleep(100);
     const push = m => ev(`window.postMessage(${JSON.stringify(m)}, '*')`);
     await push(DATA); await sleep(120);
     await check('asks for data, then lists plugins and picks the first', async () => {
